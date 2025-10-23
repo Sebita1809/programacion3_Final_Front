@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #ff6b35; /* naranja principal */
+  --color-secondary: #f7931e; /* naranja secundario */
+  --color-dark: #2d3436; /* texto oscuro*/
+  --color-light: #f5f6fa; /* fondo claro*/
+  --color-success: #00b894; /* verde éxito*/
+  --color-danger: #d63031; /* rojo peligro*/
+  --color-gray: #dfe6e9; /* gris borders*/
+}
