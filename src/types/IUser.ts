@@ -1,7 +1,9 @@
 export interface IUser {
-    name: string;
+    id?: number;
+    nombre: string;
+    apellido?: string;
     email: string;
-    password: string;
-    loggedIn?: boolean;
-    role?: "USUARIO" | "ADMIN";
+    celular?: number;
+    contrasena: string;
+    rol?: "USUARIO" | "ADMIN";
 }
