@@ -6,17 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>proyectofinalfacu</title>
   </head>
-  <body>
+  <body class="min-h-screen bg-primary/10 text-dark">
+    <header class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur border-b border-gray/40 z-50">
+      <div class="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-4">
+          <span class="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-2xl font-extrabold text-white shadow-lg">SF</span>
+          <div class="flex flex-col leading-tight">
+            <span class="text-xl font-bold text-primary">SuperFood</span>
+            <span id="navbar-role" class="text-sm font-medium text-dark/70 uppercase tracking-widest">Usuario</span>
+          </div>
+        </div>
+        <button
+          id="logout-btn"
+          type="button"
+          class="rounded-xl border border-danger px-5 py-2 text-sm font-semibold text-danger transition hover:bg-danger hover:text-white"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    </header>
+
+    <main class="flex min-h-screen flex-col items-center justify-center px-6 pt-28">
+    
+    </main>
+
     <script type="module" src="/src/main.ts"></script>
-    <script>
-      const user = localStorage.getItem("userData");
-      if (user) {
-        // TODO: redirigir al dashboard real cuando exista
-        console.info("Usuario con sesión detectada. Actualiza esta redirección cuando tengas tu dashboard.");
-        window.location.href = "/src/pages/auth/login/login.html";
-      } else {
-        window.location.href = "/src/pages/auth/login/login.html";
-      }
-    </script>
+    <script type="module" src="/src/pages/index.ts"></script>
   </body>
 </html>
