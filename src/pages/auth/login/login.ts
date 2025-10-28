@@ -1,4 +1,5 @@
 import type { IUser } from "../../../types/IUser";
+import { navigateByStoredSession, navigateToHomeByRole } from "../../../utils/navigate";
 
 interface LoginRequest {
     email: string;
@@ -9,20 +10,7 @@ const loginForm = document.getElementById("login-form") as HTMLFormElement | nul
 const emailForm = document.getElementById("email") as HTMLInputElement | null;
 const contrasenaForm = document.getElementById("contrasena") as HTMLInputElement | null;
 
-const storedUserRaw = localStorage.getItem("userData");
-if (storedUserRaw) {
-    try {
-        const storedUser = JSON.parse(storedUserRaw) as Partial<IUser>;
-        if (storedUser?.rol === "ADMIN") {
-            window.location.href = "/src/admin/adminHome/adminHome.html";
-        } else {
-            window.location.href = "/index.html";
-        }
-        console.info("Sesión existente detectada. Redirigiendo automáticamente.");
-    } catch {
-        window.location.href = "/index.html";
-    }
-}
+navigateByStoredSession();
 
 if (!loginForm || !emailForm || !contrasenaForm) {
     console.warn("Formulario de login no encontrado en el DOM.");
@@ -37,11 +25,13 @@ if (!loginForm || !emailForm || !contrasenaForm) {
             return;
         }
 
+        //Se crea objeto payload para el login y que quede mas limpio el codigo
         const payload: LoginRequest = {
             email,
             contrasena
         };
 
+        //Pasar a variable de entorno
         const url = "http://localhost:8080/auth/login";
 
         try {
@@ -68,18 +58,8 @@ if (!loginForm || !emailForm || !contrasenaForm) {
             const storedUser = data ?? { email };
             localStorage.setItem("userData", JSON.stringify(storedUser));
 
-            const isAdmin =
-                storedUser &&
-                typeof storedUser === "object" &&
-                "rol" in storedUser &&
-                (storedUser as IUser).rol === "ADMIN";
-
             alert("Inicio de sesión exitoso.");
-            if (isAdmin) {
-                window.location.href = "/src/admin/adminHome/adminHome.html";
-            } else {
-                window.location.href = "/index.html";
-            }
+            navigateToHomeByRole(storedUser);
         } catch (error) {
             console.error(error);
             const message = error instanceof Error ? error.message : "No se pudo iniciar sesión. Intenta nuevamente.";

@@ -3,7 +3,7 @@ import type { IUser } from "../types/IUser";
 const LOGIN_URL = "/src/pages/auth/login/login.html";
 const ADMIN_HOME_URL = "/src/admin/adminHome/adminHome.html";
 
-const redirect = (url: string) => {
+export const redirect = (url: string) => {
     window.location.href = url;
 };
 

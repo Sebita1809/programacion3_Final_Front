@@ -23,7 +23,9 @@ if (registerForm && nombreForm && emailForm && contrasenaForm) {
             contrasena
         };
         
+        //Pasar a variable de entorno
         const url = "http://localhost:8080/auth/register";
+
         try {
             const response = await fetch(url, {
                 method: "POST",
@@ -44,8 +46,14 @@ if (registerForm && nombreForm && emailForm && contrasenaForm) {
             } catch (parseError) {
                 console.warn("Respuesta sin cuerpo JSON:", parseError);
             }
+
             console.log("Usuario registrado:", data);
             alert("Registro exitoso. ¡Bienvenido a SuperFood!");
+
+            if (response.ok) {
+                window.location.href = "/login.html";
+            }
+            //resetear el formulario
             registerForm.reset();
         } catch (error) {
             console.error(error);

@@ -29,6 +29,7 @@ if (roleLabel) {
     roleLabel.textContent = "Admin";
 }
 
+//debería ser una funcion ya que se utiliza varias veces en el codigo
 logoutButton?.addEventListener("click", () => {
     localStorage.removeItem("userData");
     sessionStorage.clear();
