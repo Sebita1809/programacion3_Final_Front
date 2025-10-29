@@ -16,18 +16,148 @@
             <span id="navbar-role" class="text-sm font-medium uppercase tracking-widest text-dark/70">Admin</span>
           </div>
         </div>
-        <button
-          id="logout-btn"
-          type="button"
-          class="rounded-xl border border-danger px-5 py-2 text-sm font-semibold text-danger transition hover:bg-danger hover:text-white"
-        >
-          Cerrar sesión
-        </button>
+        <div class="flex items-center gap-3">
+          <div id="navbar-user-name-container" class="text-sm font-medium text-dark/80"></div>
+          <button
+            id="logout-btn"
+            type="button"
+            class="rounded-xl border border-danger px-5 py-2 text-sm font-semibold text-danger transition hover:bg-danger hover:text-white"
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </div>
-    </header>
+    </header> 
 
-    <main class="flex min-h-screen flex-col items-center px-6 pt-32">
-      
+    <main class="flex min-h-screen justify-center pt-32">
+      <div class="flex w-full max-w-6xl gap-8 px-6 pb-12">
+        <aside
+          class="sticky top-28 flex h-fit w-64 flex-col gap-4 rounded-2xl border border-gray/30 bg-white/90 p-6 shadow-sm"
+        >
+          <div class="text-xs font-semibold uppercase tracking-widest text-dark/60">Navegación</div>
+          <nav class="flex flex-col gap-2 text-sm font-medium text-dark/70">
+            <a
+              href="adminHome.html"
+              class="flex items-center justify-between rounded-xl bg-primary/10 px-4 py-2 text-primary"
+            >
+              <span>Dashboard</span>
+            </a>
+            <a
+              href="../categories/categories.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Categorías
+            </a>
+            <a
+              href="../products/products.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Productos
+            </a>
+            <a
+              href="../orders/orders.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Pedidos
+            </a>
+          </nav>
+          <div class="my-3 border-t border-gray/20"></div>
+          <a
+            href="../../../index.html"
+            class="rounded-xl px-4 py-2 text-sm font-semibold text-dark transition hover:bg-primary/10 hover:text-primary"
+          >
+            Ver tienda
+          </a>
+        </aside>
+        <section class="flex-1 rounded-2xl border border-gray/20 bg-white/70 p-8 shadow-sm">
+          <div class="text-2xl font-bold text-dark">Panel de Administración</div>
+          <div class="mt-8 grid gap-8 sm:grid-cols-2">
+            <article class="flex min-h-[14rem] flex-col gap-6 rounded-2xl border border-primary/20 bg-primary/10 p-8 shadow-sm">
+              <header class="flex items-start gap-3">
+                <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/80 text-primary shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" class="h-6 w-6">
+                    <rect x="3.25" y="3.25" width="7.5" height="7.5" rx="1.5"></rect>
+                    <rect x="13.25" y="3.25" width="7.5" height="7.5" rx="1.5"></rect>
+                    <rect x="3.25" y="13.25" width="7.5" height="7.5" rx="1.5"></rect>
+                    <rect x="13.25" y="13.25" width="7.5" height="7.5" rx="1.5"></rect>
+                  </svg>
+                </span>
+                <div>
+                  <h2 class="text-lg font-semibold text-dark">Categorías</h2>
+                  <p class="mt-1 text-sm text-dark/70">Organiza y edita las categorías disponibles en la tienda.</p>
+                </div>
+              </header>
+              <a
+                href="../categories/categories.html"
+                class="mt-auto inline-flex transform items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-1 hover:bg-primary/90"
+              >
+                Gestionar
+              </a>
+            </article>
+
+            <article class="flex min-h-[14rem] flex-col gap-6 rounded-2xl border border-secondary/20 bg-secondary/10 p-8 shadow-sm">
+              <header class="flex items-start gap-3">
+                <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/80 text-secondary shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-6 w-6">
+                    <path d="M4 8.25 12 3l8 5.25v7.5L12 21l-8-5.25v-7.5Z"></path>
+                    <path d="M12 21v-7.5"></path>
+                    <path d="M20 8.25 12 13.5 4 8.25"></path>
+                  </svg>
+                </span>
+                <div>
+                  <h2 class="text-lg font-semibold text-dark">Productos</h2>
+                  <p class="mt-1 text-sm text-dark/70">Añade nuevos productos o actualiza los existentes.</p>
+                </div>
+              </header>
+              <a
+                href="../products/products.html"
+                class="mt-auto inline-flex transform items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-1 hover:bg-primary/90"
+              >
+                Gestionar
+              </a>
+            </article>
+
+            <article class="flex min-h-[14rem] flex-col gap-6 rounded-2xl border border-success/20 bg-success/10 p-8 shadow-sm">
+              <header class="flex items-start gap-3">
+                <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/80 text-success shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-6 w-6">
+                    <path d="M4.5 5.25h15l-1.35 8.11a2.25 2.25 0 0 1-2.23 1.89H8.08a2.25 2.25 0 0 1-2.23-1.89L4.5 5.25Z"></path>
+                    <path d="M9.75 10.5h4.5"></path>
+                    <circle cx="9" cy="18.75" r="1.25"></circle>
+                    <circle cx="15" cy="18.75" r="1.25"></circle>
+                  </svg>
+                </span>
+                <div>
+                  <h2 class="text-lg font-semibold text-dark">Pedidos</h2>
+                  <p class="mt-1 text-sm text-dark/70">Supervisa el estado y la preparación de los pedidos.</p>
+                </div>
+              </header>
+              <a
+                href="../orders/orders.html"
+                class="mt-auto inline-flex transform items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-1 hover:bg-primary/90"
+              >
+                Gestionar
+              </a>
+            </article>
+
+            <article class="flex min-h-[14rem] flex-col justify-between gap-6 rounded-2xl border border-dark/15 bg-dark/5 p-8 shadow-sm">
+              <header class="flex items-start gap-3">
+                <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-6 w-6">
+                    <path d="M12 4.5a7.5 7.5 0 1 0 7.5 7.5A7.5 7.5 0 0 0 12 4.5Z"></path>
+                    <path d="m9.75 12 1.75 1.75 3.75-3.75"></path>
+                  </svg>
+                </span>
+                <div>
+                  <h2 class="text-lg font-semibold text-dark">Disponible</h2>
+                  <p class="mt-1 text-sm text-dark/70">Consulta el estado de los productos que siguen visibles en la tienda.</p>
+                </div>
+                </header>
+              <p class="text-sm font-semibold uppercase tracking-wide text-primary/60">Productos activos</p>
+            </article>
+          </div>
+        </section>
+      </div>
     </main>
 
     <script type="module" src="/src/main.ts"></script>

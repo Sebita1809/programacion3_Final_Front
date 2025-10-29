@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="" href="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SuperFood | Pedidos</title>
+  </head>
+  <body class="min-h-screen bg-primary/5 text-dark">
+    <header class="fixed top-0 left-0 right-0 z-50 border-b border-gray/40 bg-white/90 backdrop-blur">
+      <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-4">
+          <span class="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-2xl font-extrabold text-white shadow-lg">SF</span>
+          <div class="flex flex-col leading-tight">
+            <span class="text-xl font-bold text-primary">SuperFood</span>
+            <span id="navbar-role" class="text-sm font-medium uppercase tracking-widest text-dark/70">Admin</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="navbar-user-name-container" class="text-sm font-medium text-dark/80"></div>
+          <button
+            id="logout-btn"
+            type="button"
+            class="rounded-xl border border-danger px-5 py-2 text-sm font-semibold text-danger transition hover:bg-danger hover:text-white"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex min-h-screen justify-center pt-32">
+      <div class="flex w-full max-w-6xl gap-8 px-6 pb-12">
+        <aside
+          class="sticky top-28 flex h-fit w-64 flex-col gap-4 rounded-2xl border border-gray/30 bg-white/90 p-6 shadow-sm"
+        >
+          <div class="text-xs font-semibold uppercase tracking-widest text-dark/60">Navegación</div>
+          <nav class="flex flex-col gap-2 text-sm font-medium text-dark/70">
+            <a
+              href="../adminHome/adminHome.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Dashboard
+            </a>
+            <a
+              href="../categories/categories.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Categorías
+            </a>
+            <a
+              href="../products/products.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Productos
+            </a>
+            <a
+              href="orders.html"
+              class="flex items-center justify-between rounded-xl bg-primary/10 px-4 py-2 text-primary"
+            >
+              <span>Pedidos</span>
+            </a>
+          </nav>
+          <div class="my-3 border-t border-gray/20"></div>
+          <a
+            href="../../../index.html"
+            class="rounded-xl px-4 py-2 text-sm font-semibold text-dark transition hover:bg-primary/10 hover:text-primary"
+          >
+            Ver tienda
+          </a>
+        </aside>
+        <section class="flex-1 rounded-2xl border border-gray/20 bg-white/70 p-8 shadow-sm">
+          <div class="text-2xl font-bold text-dark">Gestión de pedidos</div>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/admin/orders/orders.ts"></script>
+  </body>
+</html>

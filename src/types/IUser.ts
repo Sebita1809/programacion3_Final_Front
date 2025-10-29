@@ -3,7 +3,7 @@ export interface IUser {
     nombre: string;
     apellido?: string;
     email: string;
-    celular?: number;
+    celular?: string;
     contrasena: string;
     rol?: "USUARIO" | "ADMIN";
 }

@@ -2,25 +2,37 @@ import type { IUser } from "../../../types/IUser";
 
 const registerForm = document.getElementById("register-form") as HTMLFormElement | null;
 const nombreForm = document.getElementById("nombre") as HTMLInputElement | null;
+const apellidoForm = document.getElementById("apellido") as HTMLInputElement | null;
 const emailForm = document.getElementById("email") as HTMLInputElement | null;
+const telefonoForm = document.getElementById("telefono") as HTMLInputElement | null;
 const contrasenaForm = document.getElementById("contrasena") as HTMLInputElement | null;
 
-if (registerForm && nombreForm && emailForm && contrasenaForm) {
+if (registerForm && nombreForm && apellidoForm && emailForm && telefonoForm && contrasenaForm) {
     registerForm.addEventListener("submit", async (e: SubmitEvent) => {
         e.preventDefault();
         const nombre = nombreForm.value.trim();
+        const apellido = apellidoForm.value.trim();
         const email = emailForm.value.trim();
+        const telefono = telefonoForm.value.trim();
+        const telefonoNumerico = telefono.replace(/\D/g, "");
         const contrasena = contrasenaForm.value;
 
-        if (!nombre || !email || !contrasena) {
+        if (!nombre || !apellido || !email || !telefono || !contrasena) {
             alert("Por favor, complete todos los campos");
+            return;
+        }
+
+        if (!telefonoNumerico) {
+            alert("Ingrese un número de teléfono válido");
             return;
         }
 
         const user: IUser = {
             nombre,
+            apellido,
             email,
-            contrasena
+            contrasena,
+            celular: telefonoNumerico
         };
         
         //Pasar a variable de entorno

@@ -1,7 +1,9 @@
 import type { IUser } from "../../types/IUser";
+import { renderNavBarUserName } from "../../utils/navBarName";
 
 const roleLabel = document.getElementById("navbar-role");
 const logoutButton = document.getElementById("logout-btn");
+const userNameContainer = document.getElementById("navbar-user-name-container");
 
 const userRaw = localStorage.getItem("userData");
 
@@ -28,6 +30,8 @@ if (userData.rol !== "ADMIN") {
 if (roleLabel) {
     roleLabel.textContent = "Admin";
 }
+
+renderNavBarUserName(userNameContainer);
 
 //debería ser una funcion ya que se utiliza varias veces en el codigo
 logoutButton?.addEventListener("click", () => {

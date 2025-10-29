@@ -1,8 +1,7 @@
 import type { IUser } from "../types/IUser";
+import { renderNavBarUserName } from "../utils/navBarName";
 
 const LOGIN_URL = "/src/pages/auth/login/login.html";
-const ADMIN_HOME_URL = "/src/admin/adminHome/adminHome.html";
-
 export const redirect = (url: string) => {
     window.location.href = url;
 };
@@ -34,15 +33,13 @@ const init = () => {
         return;
     }
 
-    if (userData.rol === "ADMIN") {
-        redirect(ADMIN_HOME_URL);
-        return;
+    const navbarRole = document.getElementById("navbar-role");
+    const userNameContainer = document.getElementById("navbar-user-name-container");
+    if (navbarRole) {
+        navbarRole.textContent = userData.rol === "ADMIN" ? "Admin" : "Usuario";
     }
 
-    const navbarRole = document.getElementById("navbar-role");
-    if (navbarRole) {
-        navbarRole.textContent = "Usuario";
-    }
+    renderNavBarUserName(userNameContainer);
 
     const logoutBtn = document.getElementById("logout-btn");
     if (logoutBtn) {
