@@ -1,4 +1,5 @@
 import type { IUser } from "../types/IUser";
+import { getStoredUser } from "./auth";
 
 const USER_HOME_URL = "/index.html";
 const ADMIN_HOME_URL = "/src/admin/adminHome/adminHome.html";
@@ -22,6 +23,21 @@ export const navigateToHomeByRole = (user: unknown) => {
 };
 
 export const navigateByStoredSession = () => {
+    const hadSession = Boolean(localStorage.getItem("userData"));
+    const storedUser = getStoredUser();
+    if (!storedUser) {
+        if (hadSession) {
+            redirect(USER_HOME_URL);
+        }
+        return;
+    }
+
+    navigateToHomeByRole(storedUser);
+    console.info("Sesión existente detectada. Redirigiendo automáticamente.");
+};
+
+/*
+export const navigateByStoredSession = () => {
     const storedUserRaw = localStorage.getItem("userData");
     if (!storedUserRaw) return;
 
@@ -34,3 +50,4 @@ export const navigateByStoredSession = () => {
         redirect(USER_HOME_URL);
     }
 };
+*/

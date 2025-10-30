@@ -1,11 +1,36 @@
-import type { IUser } from "../types/IUser";
 import { renderNavBarUserName } from "../utils/navBarName";
+import { getStoredUserOrRedirect, registerLogoutHandler } from "../utils/auth";
 
+const init = () => {
+    const userData = getStoredUserOrRedirect();
+
+    const navbarRole = document.getElementById("navbar-role");
+    const userNameContainer = document.getElementById("navbar-user-name-container");
+    if (navbarRole) {
+        navbarRole.textContent = userData.rol === "ADMIN" ? "Admin" : userData.rol ?? "";
+    }
+
+    renderNavBarUserName(userNameContainer);
+
+    const logoutBtn = document.getElementById("logout-btn");
+    registerLogoutHandler(logoutBtn);
+};
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+} else {
+    init();
+}
+
+/*
 const LOGIN_URL = "/src/pages/auth/login/login.html";
 export const redirect = (url: string) => {
     window.location.href = url;
 };
 
+const clearSessionAndRedirect = () => {
+
+/*
 const clearSessionAndRedirect = () => {
     localStorage.removeItem("userData");
     sessionStorage.clear();
@@ -46,9 +71,4 @@ const init = () => {
         logoutBtn.addEventListener("click", clearSessionAndRedirect);
     }
 };
-
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-} else {
-    init();
-}
+*/

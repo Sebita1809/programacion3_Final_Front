@@ -1,432 +1,241 @@
-import type { IUser } from "../../types/IUser";
-import type { ICategoria } from "../../types/ICategoria";
 import { renderNavBarUserName } from "../../utils/navBarName";
+import {
+    registerLogoutHandler,
+    requireAdminSession
+} from "../../utils/auth";
+
+const CATEGORY_API_URL = "http://localhost:8080/category/";
+const CATEGORY_API_URL_CREATE = "http://localhost:8080/category/create";
 
 const roleLabel = document.getElementById("navbar-role");
 const logoutButton = document.getElementById("logout-btn");
 const userNameContainer = document.getElementById("navbar-user-name-container");
 
-const rawUser = localStorage.getItem("userData");
-
-if (!rawUser) {
-    window.location.href = "/src/pages/auth/login/login.html";
-    throw new Error();
-}
-
-let userData: IUser;
-try {
-    userData = JSON.parse(rawUser) as IUser;
-} catch {
-    localStorage.removeItem("userData");
-    window.location.href = "/src/pages/auth/login/login.html";
-    throw new Error();
-}
-
-if (userData.rol !== "ADMIN") {
-    window.location.href = "/index.html";
-    throw new Error();
-}
+const adminUser = requireAdminSession();
 
 if (roleLabel) {
-    roleLabel.textContent = "Admin";
+    roleLabel.textContent = adminUser.rol === "ADMIN" ? "Admin" : adminUser.rol ?? "";
 }
 
 renderNavBarUserName(userNameContainer);
 
-logoutButton?.addEventListener("click", () => {
-    localStorage.removeItem("userData");
-    sessionStorage.clear();
-    window.location.href = "/src/pages/auth/login/login.html";
+registerLogoutHandler(logoutButton);
+
+const newCategoryButton = document.getElementById("toggle-category-form") as HTMLButtonElement | null;
+const categoryModal = document.getElementById("category-modal") as HTMLDivElement | null;
+const modalContent = document.getElementById("category-modal-content") as HTMLDivElement | null;
+const categoryForm = document.getElementById("category-form") as HTMLFormElement | null;
+const nameInput = document.getElementById("category-name") as HTMLInputElement | null;
+const categoryTableBody = document.getElementById("category-table-body") as HTMLTableSectionElement | null;
+
+type CategoryRowData = {
+    id: number | string;
+    nombre: string;
+    descripcion: string;
+    imagenUrl?: string;
+};
+
+const getModalCloseButtons = (): HTMLButtonElement[] => {
+    if (!categoryModal) return [];
+    return Array.from(categoryModal.querySelectorAll<HTMLButtonElement>("[data-close-modal]"));
+};
+
+const handleEscapeKey = (event: KeyboardEvent) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeCategoryModal();
+};
+
+const openCategoryModal = () => {
+    if (!categoryModal) return;
+
+    categoryModal.classList.remove("hidden");
+    categoryModal.classList.add("flex");
+    document.body.classList.add("overflow-hidden");
+    document.addEventListener("keydown", handleEscapeKey);
+
+    window.requestAnimationFrame(() => {
+        nameInput?.focus();
+    });
+};
+
+function closeCategoryModal() {
+    if (!categoryModal) return;
+
+    categoryModal.classList.add("hidden");
+    categoryModal.classList.remove("flex");
+    document.body.classList.remove("overflow-hidden");
+    document.removeEventListener("keydown", handleEscapeKey);
+    categoryForm?.reset();
+}
+
+newCategoryButton?.addEventListener("click", () => {
+    openCategoryModal();
 });
 
-const CATEGORY_STORAGE_KEY = "adminCategories";
+getModalCloseButtons().forEach((button) => {
+    button.addEventListener("click", () => {
+        closeCategoryModal();
+    });
+});
 
-const categoryForm = document.getElementById("category-form") as HTMLFormElement | null;
-const toggleFormButton = document.getElementById("toggle-category-form") as HTMLButtonElement | null;
-const cancelFormButton = document.getElementById("cancel-category-form") as HTMLButtonElement | null;
-const nameInput = document.getElementById("category-name") as HTMLInputElement | null;
-const descriptionInput = document.getElementById("category-description") as HTMLTextAreaElement | null;
-const imageInput = document.getElementById("category-image") as HTMLInputElement | null;
-const tableWrapper = document.getElementById("category-table-wrapper") as HTMLDivElement | null;
-const tableBody = document.getElementById("category-table-body") as HTMLTableSectionElement | null;
-const emptyState = document.getElementById("category-empty-state") as HTMLParagraphElement | null;
-const formError = document.getElementById("category-form-error") as HTMLParagraphElement | null;
-const formTitle = document.getElementById("category-form-title") as HTMLHeadingElement | null;
-const submitButton = categoryForm?.querySelector<HTMLButtonElement>('button[type="submit"]') ?? null;
+categoryModal?.addEventListener("click", (event) => {
+    if (event.target === categoryModal) {
+        closeCategoryModal();
+    }
+});
 
-type FormMode = "create" | "edit";
-let formMode: FormMode = "create";
-let editingCategoryId: number | null = null;
-let categories: ICategoria[] = [];
-let nextCategoryId = 1;
+modalContent?.addEventListener("click", (event) => {
+    event.stopPropagation();
+});
 
-const showFormError = (message: string) => {
-    if (!formError) return;
-    formError.textContent = message;
-    formError.classList.remove("hidden");
+const removePlaceholderRow = () => {
+    if (!categoryTableBody) return;
+    const placeholderRow = categoryTableBody.querySelector<HTMLTableRowElement>("[data-placeholder-row]");
+    placeholderRow?.remove();
 };
 
-const clearFormError = () => {
-    if (!formError) return;
-    formError.textContent = "";
-    formError.classList.add("hidden");
-};
-
-// Actualiza el texto del botón que muestra u oculta el formulario de categorías.
-// Si el formulario está oculto (tiene el atributo "hidden"), el botón mostrará "Nueva categoría".
-// Si el formulario está visible:
-//   - mostrará "Cerrar edición" cuando el modo actual sea "edit".
-//   - mostrará "Ocultar formulario" en cualquier otro caso.
-const updateToggleLabel = () => {
-    if (!toggleFormButton || !categoryForm) return;
-    const isHidden = categoryForm.hasAttribute("hidden");
-    if (isHidden) {
-        toggleFormButton.textContent = "Nueva categoría";
-        return;
-    }
-    toggleFormButton.textContent = formMode === "edit" ? "Cerrar edición" : "Ocultar formulario";
-};
-
-
-// CONTINUAR DESDE ACA
-
-const setFormMode = (mode: FormMode) => {
-    formMode = mode;
-
-    if (submitButton) {
-        submitButton.textContent = mode === "edit" ? "Actualizar" : "Guardar";
-    }
-
-    if (cancelFormButton) {
-        cancelFormButton.textContent = mode === "edit" ? "Cancelar edición" : "Cancelar";
-    }
-
-    if (formTitle) {
-        formTitle.textContent = mode === "edit" ? "Editar categoría" : "Nueva categoría";
-    }
-
-    updateToggleLabel();
-};
-
-const generateCategoryId = () => nextCategoryId++;
-
-const isValidUrl = (value: string) => {
-    if (!value) return false;
-    try {
-        new URL(value);
-        return true;
-    } catch {
-        return false;
-    }
-};
-
-const loadCategories = (): ICategoria[] => {
-    const rawCategories = localStorage.getItem(CATEGORY_STORAGE_KEY);
-    if (!rawCategories) return [];
-
-    try {
-        const parsed = JSON.parse(rawCategories);
-        if (!Array.isArray(parsed)) return [];
-
-        const normalized: ICategoria[] = [];
-        for (const item of parsed) {
-            if (!item || typeof item !== "object") continue;
-            const record = item as Record<string, unknown>;
-
-            const idRaw = record.id;
-            const nombre = record.nombre;
-            const descripcion = record.descripcion;
-            const imagenUrl = record.imagenUrl;
-
-            const id =
-                typeof idRaw === "number"
-                    ? idRaw
-                    : (() => {
-                          const idText = String(idRaw ?? "").trim();
-                          if (!idText) return Number.NaN;
-                          const matches = idText.match(/\d+/g);
-                          if (!matches || !matches.length) return Number.NaN;
-                          return Number.parseInt(matches[matches.length - 1], 10);
-                      })();
-
-            if (
-                !Number.isFinite(id) ||
-                id < 1 ||
-                typeof nombre !== "string" ||
-                typeof descripcion !== "string"
-            ) {
-                continue;
-            }
-
-            normalized.push({
-                id,
-                nombre,
-                descripcion,
-                imagenUrl:
-                    typeof imagenUrl === "string" && imagenUrl.trim().length > 0
-                        ? imagenUrl.trim()
-                        : undefined
-            });
-        }
-
-        return normalized.sort((a, b) => b.id - a.id);
-    } catch {
-        localStorage.removeItem(CATEGORY_STORAGE_KEY);
-        return [];
-    }
-};
-
-const saveCategories = (items: ICategoria[]) => {
-    try {
-        localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(items));
-    } catch {
-        // Ignoramos fallos de almacenamiento para no interrumpir la experiencia.
-    }
-};
-
-const createCategoryRow = (category: ICategoria) => {
-    const row = document.createElement("tr");
-    row.className = "transition hover:bg-primary/5";
-
-    const idCell = document.createElement("td");
-    idCell.className = "px-4 py-3 align-top break-all font-mono text-xs text-dark/70";
-    idCell.textContent = String(category.id);
-
-    const imageCell = document.createElement("td");
-    imageCell.className = "px-4 py-3 align-top";
-
-    if (category.imagenUrl) {
-        const img = document.createElement("img");
-        img.src = category.imagenUrl;
-        img.alt = `Imagen de la categoría ${category.nombre}`;
-        img.className = "h-14 w-14 rounded-xl object-cover shadow-sm";
-        img.loading = "lazy";
-        img.decoding = "async";
-        imageCell.appendChild(img);
-    } else {
-        const placeholder = document.createElement("div");
-        placeholder.className =
-            "flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold text-primary";
-        placeholder.textContent = category.nombre.charAt(0).toUpperCase();
-        imageCell.appendChild(placeholder);
-    }
-
-    const nameCell = document.createElement("td");
-    nameCell.className = "px-4 py-3 align-top";
-    const nameWrapper = document.createElement("div");
-    nameWrapper.className = "flex flex-col gap-1";
-
-    const title = document.createElement("span");
-    title.className = "text-sm font-semibold text-dark";
-    title.textContent = category.nombre;
-
-    nameWrapper.appendChild(title);
-
-    nameCell.appendChild(nameWrapper);
-
-    const descriptionCell = document.createElement("td");
-    descriptionCell.className = "px-4 py-3 align-top text-sm text-dark/70";
-    descriptionCell.textContent = category.descripcion;
-
+const buildActionsCell = () => {
     const actionsCell = document.createElement("td");
-    actionsCell.className = "px-4 py-3 align-top";
-
-    const actionsWrapper = document.createElement("div");
-    actionsWrapper.className = "flex flex-wrap items-center gap-2";
+    actionsCell.className = "px-6 py-4 text-right text-sm";
 
     const editButton = document.createElement("button");
     editButton.type = "button";
-    editButton.dataset.action = "edit";
-    editButton.dataset.id = String(category.id);
     editButton.className =
-        "inline-flex items-center justify-center rounded-lg border border-primary px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10";
+        "rounded-lg border border-primary px-3 py-1 text-primary transition hover:bg-primary hover:text-white";
     editButton.textContent = "Editar";
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
-    deleteButton.dataset.action = "delete";
-    deleteButton.dataset.id = String(category.id);
     deleteButton.className =
-        "inline-flex items-center justify-center rounded-lg border border-danger px-3 py-1 text-xs font-semibold text-danger transition hover:bg-danger/10";
-    deleteButton.textContent = "Borrar";
+        "ml-2 rounded-lg border border-danger px-3 py-1 text-danger transition hover:bg-danger hover:text-white";
+    deleteButton.textContent = "Eliminar";
 
-    actionsWrapper.append(editButton, deleteButton);
-    actionsCell.appendChild(actionsWrapper);
+    actionsCell.append(editButton, deleteButton);
+    return actionsCell;
+};
 
-    row.append(idCell, imageCell, nameCell, descriptionCell, actionsCell);
+const createCategoryRow = ({ id, nombre, descripcion, imagenUrl }: CategoryRowData): HTMLTableRowElement => {
+    const row = document.createElement("tr");
+    row.className = "transition hover:bg-primary/5";
+    row.dataset.categoryId = String(id);
+
+    const idCell = document.createElement("td");
+    idCell.className = "px-6 py-4 text-sm font-medium text-dark/80";
+    idCell.textContent = String(id);
+
+    const imageCell = document.createElement("td");
+    imageCell.className = "px-6 py-4";
+    if (imagenUrl) {
+        const image = document.createElement("img");
+        image.src = imagenUrl;
+        image.alt = nombre;
+        image.className = "h-12 w-12 rounded-lg object-cover shadow-sm";
+        imageCell.appendChild(image);
+    } else {
+        const placeholder = document.createElement("div");
+        placeholder.className =
+            "flex h-12 w-12 items-center justify-center rounded-lg bg-gray/10 text-xs font-semibold text-gray/50";
+        placeholder.textContent = "Sin foto";
+        imageCell.appendChild(placeholder);
+    }
+
+    const nameCell = document.createElement("td");
+    nameCell.className = "px-6 py-4 text-sm font-semibold text-dark";
+    nameCell.textContent = nombre;
+
+    const descriptionCell = document.createElement("td");
+    descriptionCell.className = "px-6 py-4 text-sm text-dark/70";
+    descriptionCell.textContent = descripcion;
+
+    row.append(idCell, imageCell, nameCell, descriptionCell, buildActionsCell());
     return row;
 };
 
-const renderCategories = () => {
-    if (!tableWrapper || !tableBody) return;
-
-    tableBody.innerHTML = "";
-
-    if (!categories.length) {
-        tableWrapper.setAttribute("hidden", "");
-        emptyState?.classList.remove("hidden");
-        return;
-    }
-
-    tableWrapper.removeAttribute("hidden");
-    emptyState?.classList.add("hidden");
-
-    categories.forEach((category) => {
-        tableBody.appendChild(createCategoryRow(category));
-    });
+const appendCategoryRow = (data: CategoryRowData) => {
+    if (!categoryTableBody) return;
+    removePlaceholderRow();
+    categoryTableBody.appendChild(createCategoryRow(data));
 };
 
-const openForm = (options?: { focus?: boolean }) => {
-    if (!categoryForm) return;
-    categoryForm.removeAttribute("hidden");
-    updateToggleLabel();
-    clearFormError();
-    if (options?.focus !== false) {
-        nameInput?.focus();
-    }
-};
+const loadCategories = async () => {
+    try {
+        const response = await fetch(CATEGORY_API_URL);
 
-const closeForm = (reset = true) => {
-    if (!categoryForm) return;
-    categoryForm.setAttribute("hidden", "");
-    editingCategoryId = null;
-    setFormMode("create");
-    clearFormError();
-    if (reset) {
-        categoryForm.reset();
-    }
-    updateToggleLabel();
-};
-
-setFormMode("create");
-
-toggleFormButton?.addEventListener("click", () => {
-    if (!categoryForm) return;
-    const isHidden = categoryForm.hasAttribute("hidden");
-    if (isHidden) {
-        openForm();
-    } else {
-        closeForm();
-    }
-});
-
-cancelFormButton?.addEventListener("click", () => {
-    closeForm();
-});
-
-categoryForm?.addEventListener("input", () => {
-    clearFormError();
-});
-
-categoryForm?.addEventListener("submit", (event) => {
-    event.preventDefault();
-    if (!nameInput || !descriptionInput) return;
-
-    const nombre = nameInput.value.trim();
-    const descripcion = descriptionInput.value.trim();
-    const imagenUrl = imageInput?.value.trim() ?? "";
-
-    if (!nombre || !descripcion) {
-        showFormError("Completá el nombre y la descripción para continuar.");
-        return;
-    }
-
-    if (imagenUrl && !isValidUrl(imagenUrl)) {
-        showFormError("La URL de la imagen no es válida.");
-        return;
-    }
-
-    const normalizedImage = imagenUrl || undefined;
-
-    if (formMode === "edit" && editingCategoryId) {
-        const existing = categories.find((item) => item.id === editingCategoryId);
-
-        if (!existing) {
-            closeForm();
+        if (!response.ok) {
+            console.error(`No se pudieron obtener las categorías. Código: ${response.status}`);
             return;
         }
 
-        const updatedCategory: ICategoria = {
-            ...existing,
-            nombre,
-            descripcion,
-            imagenUrl: normalizedImage
-        };
+        const categories = (await response.json()) as CategoryRowData[];
+        if (!Array.isArray(categories)) return;
 
-        categories = categories.map((item) =>
-            item.id === editingCategoryId ? updatedCategory : item
-        );
+        categories.forEach((category) => {
+            appendCategoryRow({
+                id: category.id,
+                nombre: category.nombre,
+                descripcion: category.descripcion,
+                imagenUrl: category.imagenUrl
+            });
+        });
+    } catch (error) {
+        console.error("Error al obtener las categorías:", error);
+    }
+};
 
-        saveCategories(categories);
-        renderCategories();
-        closeForm();
+loadCategories();
+
+categoryForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!categoryForm) return;
+
+    const formData = new FormData(categoryForm);
+    const nombre = formData.get("nombre")?.toString().trim() ?? "";
+    const descripcion = formData.get("descripcion")?.toString().trim() ?? "";
+    const imagenUrlRaw = formData.get("imagenUrl")?.toString().trim() ?? "";
+    const imagenUrl = imagenUrlRaw.length > 0 ? imagenUrlRaw : undefined;
+
+    if (!nombre || !descripcion) {
+        console.warn("Nombre y descripción son obligatorios.");
         return;
     }
 
-    const newCategory: ICategoria = {
-        id: generateCategoryId(),
+    const payload = {
         nombre,
         descripcion,
-        imagenUrl: normalizedImage
+        imagenUrl
     };
 
-    categories = [newCategory, ...categories];
-    saveCategories(categories);
-    renderCategories();
-    closeForm();
-});
+    let categoryId: number | string = Date.now();
 
-tableBody?.addEventListener("click", (event) => {
-    const target = event.target as HTMLElement;
-    const actionButton = target.closest<HTMLButtonElement>("button[data-action]");
+    try {
+        const response = await fetch(CATEGORY_API_URL_CREATE, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
 
-    if (!actionButton) return;
-
-    const { action, id } = actionButton.dataset;
-    if (!action || !id) return;
-
-    const categoryId = Number.parseInt(id, 10);
-    if (Number.isNaN(categoryId) || categoryId < 1) return;
-
-    const category = categories.find((item) => item.id === categoryId);
-    if (!category) return;
-
-    if (action === "edit") {
-        editingCategoryId = categoryId;
-        setFormMode("edit");
-
-        if (nameInput) {
-            nameInput.value = category.nombre;
+        if (!response.ok) {
+            console.error(`No se pudo crear la categoría. Código: ${response.status}`);
+        } else {
+            const body = (await response.json()) as { id?: number | string } | null;
+            if (body?.id !== undefined) {
+                categoryId = body.id;
+            }
         }
-        if (descriptionInput) {
-            descriptionInput.value = category.descripcion;
-        }
-        if (imageInput) {
-            imageInput.value = category.imagenUrl ?? "";
-        }
-
-        openForm();
-        return;
+    } catch (error) {
+        console.error("Error al crear la categoría:", error);
     }
+    
 
-    if (action === "delete") {
-        const confirmed = window.confirm(
-            `¿Seguro que querés borrar la categoría “${category.nombre}”?`
-        );
-        if (!confirmed) return;
+    appendCategoryRow({
+        id: categoryId,
+        ...payload
+    });
 
-        categories = categories.filter((item) => item.id !== categoryId);
-        saveCategories(categories);
-        renderCategories();
-
-        if (editingCategoryId === categoryId) {
-            closeForm();
-        }
-
-    }
+    closeCategoryModal();
+    location.reload();
+    loadCategories();
 });
-
-categories = loadCategories();
-const maxExistingId = categories.reduce((max, item) => Math.max(max, item.id), 0);
-nextCategoryId = Math.max(maxExistingId + 1, 1);
-renderCategories();

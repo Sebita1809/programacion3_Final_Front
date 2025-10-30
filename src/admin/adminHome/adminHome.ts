@@ -1,10 +1,22 @@
 import type { IUser } from "../../types/IUser";
 import { renderNavBarUserName } from "../../utils/navBarName";
+import { registerLogoutHandler, requireAdminSession } from "../../utils/auth";
 
 const roleLabel = document.getElementById("navbar-role");
 const logoutButton = document.getElementById("logout-btn");
 const userNameContainer = document.getElementById("navbar-user-name-container");
 
+const adminUser: IUser = requireAdminSession();
+
+if (roleLabel) {
+    roleLabel.textContent = adminUser.rol === "ADMIN" ? "Admin" : adminUser.rol ?? "";
+}
+
+renderNavBarUserName(userNameContainer);
+
+registerLogoutHandler(logoutButton);
+
+/*
 const userRaw = localStorage.getItem("userData");
 
 if (!userRaw) {
@@ -39,3 +51,4 @@ logoutButton?.addEventListener("click", () => {
     sessionStorage.clear();
     window.location.href = "/src/pages/auth/login/login.html";
 });
+*/
