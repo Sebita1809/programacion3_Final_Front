@@ -70,7 +70,160 @@
           </a>
         </aside>
         <section class="flex-1 rounded-2xl border border-gray/20 bg-white/70 p-8 shadow-sm">
-          <div class="text-2xl font-bold text-dark">Gestión de productos</div>
+          <header class="mb-6 flex items-center justify-between">
+            <h1 class="text-3xl font-semibold text-dark">Gestión de productos</h1>
+            <button
+              id="toggle-product-form"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-white"
+            >
+              Nuevo producto
+            </button>
+          </header>
+
+          <div
+            id="product-modal"
+            class="fixed inset-0 z-50 hidden items-center justify-center bg-dark/30 px-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="product-modal-title"
+          >
+            <div
+              class="relative w-full max-w-2xl rounded-2xl bg-white p-8 shadow-xl"
+              id="product-modal-content"
+            >
+              <button
+                type="button"
+                class="absolute right-4 top-4 text-sm font-semibold text-dark/60 transition hover:text-dark"
+                data-close-modal
+              >
+                Cerrar
+              </button>
+              <h2 id="product-modal-title" class="mb-6 text-2xl font-semibold text-dark">
+                Nuevo producto
+              </h2>
+              <form id="product-form" class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div class="flex flex-col gap-2">
+                  <label for="product-name" class="text-sm font-semibold text-dark">Nombre</label>
+                  <input
+                    id="product-name"
+                    name="nombre"
+                    type="text"
+                    placeholder="Ej. Jugo Detox"
+                    class="rounded-xl border border-gray/40 px-4 py-3 text-sm text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    required
+                  />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <label for="product-price" class="text-sm font-semibold text-dark">Precio</label>
+                  <input
+                    id="product-price"
+                    name="precio"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    class="rounded-xl border border-gray/40 px-4 py-3 text-sm text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    required
+                  />
+                </div>
+
+                <div class="flex flex-col gap-2 md:col-span-2">
+                  <label for="product-description" class="text-sm font-semibold text-dark">
+                    Descripción
+                  </label>
+                  <textarea
+                    id="product-description"
+                    name="descripcion"
+                    rows="3"
+                    placeholder="Descripción breve del producto"
+                    class="rounded-xl border border-gray/40 px-4 py-3 text-sm text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <label for="product-category" class="text-sm font-semibold text-dark">Categoría</label>
+                  <select
+                    id="product-category"
+                    name="categoria"
+                    class="rounded-xl border border-gray/40 px-4 py-3 text-sm text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    required
+                  >
+                    <option value="" disabled selected>
+                      Seleccioná una categoría
+                    </option>
+                  </select>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <label for="product-image" class="text-sm font-semibold text-dark">URL de imagen</label>
+                  <input
+                    id="product-image"
+                    name="imagenUrl"
+                    type="url"
+                    placeholder="https://..."
+                    class="rounded-xl border border-gray/40 px-4 py-3 text-sm text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <label for="product-stock" class="text-sm font-semibold text-dark">Stock</label>
+                  <select
+                    id="product-stock"
+                    name="stock"
+                    class="rounded-xl border border-gray/40 px-4 py-3 text-sm text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="SI">Sí</option>
+                    <option value="NO">No</option>
+                  </select>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 border-t border-gray/20 pt-4 md:col-span-2">
+                  <button
+                    type="button"
+                    class="rounded-xl border border-gray/40 px-4 py-2 text-sm font-semibold text-dark/70 transition hover:bg-gray/10"
+                    data-close-modal
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    class="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-white"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-gray/20 bg-white shadow-sm">
+            <div class="overflow-hidden">
+              <table class="min-w-full divide-y divide-gray/20 text-left text-sm text-dark/80">
+                <thead class="bg-primary/5 text-xs font-semibold uppercase tracking-wider text-dark/70">
+                  <tr>
+                    <th scope="col" class="px-6 py-4">ID</th>
+                    <th scope="col" class="px-6 py-4">Imagen</th>
+                    <th scope="col" class="px-6 py-4">Nombre</th>
+                    <th scope="col" class="px-6 py-4">Descripción</th>
+                    <th scope="col" class="px-6 py-4">Precio</th>
+                    <th scope="col" class="px-6 py-4">Categoría</th>
+                    <th scope="col" class="px-6 py-4">Stock</th>
+                    <th scope="col" class="px-6 py-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="product-table-body" class="divide-y divide-gray/10">
+                  <tr data-placeholder-row>
+                    <td colspan="8" class="px-6 py-8 text-center text-sm text-dark/50">
+                      Aún no creaste productos.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
       </div>
     </main>

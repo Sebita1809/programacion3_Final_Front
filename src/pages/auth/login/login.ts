@@ -1,10 +1,6 @@
+import type { LoginRequest } from "../../../types/LoginRequest";
 import type { IUser } from "../../../types/IUser";
 import { navigateByStoredSession, navigateToHomeByRole } from "../../../utils/navigate";
-
-interface LoginRequest {
-    email: string;
-    contrasena: string;
-}
 
 const loginForm = document.getElementById("login-form") as HTMLFormElement | null;
 const emailForm = document.getElementById("email") as HTMLInputElement | null;

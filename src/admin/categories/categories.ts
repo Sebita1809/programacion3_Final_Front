@@ -1,4 +1,5 @@
 import { renderNavBarUserName } from "../../utils/navBarName";
+import type { CategoryRowData } from "../../types/adminCategories";
 import {
     registerLogoutHandler,
     requireAdminSession
@@ -27,12 +28,25 @@ const modalContent = document.getElementById("category-modal-content") as HTMLDi
 const categoryForm = document.getElementById("category-form") as HTMLFormElement | null;
 const nameInput = document.getElementById("category-name") as HTMLInputElement | null;
 const categoryTableBody = document.getElementById("category-table-body") as HTMLTableSectionElement | null;
+const descriptionInput = document.getElementById("category-description") as HTMLTextAreaElement | null;
+const imageInput = document.getElementById("category-image") as HTMLInputElement | null;
+const modalTitle = document.getElementById("category-modal-title") as HTMLHeadingElement | null;
+const submitButton =
+    categoryForm?.querySelector<HTMLButtonElement>('button[type="submit"]') ?? null;
 
-type CategoryRowData = {
-    id: number | string;
-    nombre: string;
-    descripcion: string;
-    imagenUrl?: string;
+let editingCategoryId: number | string | null = null;
+let editingRow: HTMLTableRowElement | null = null;
+
+const resetFormState = () => {
+    editingCategoryId = null;
+    editingRow = null;
+    if (modalTitle) {
+        modalTitle.textContent = "Nueva categoría";
+    }
+    if (submitButton) {
+        submitButton.textContent = "Guardar";
+    }
+    categoryForm?.reset();
 };
 
 const getModalCloseButtons = (): HTMLButtonElement[] => {
@@ -66,10 +80,37 @@ function closeCategoryModal() {
     categoryModal.classList.remove("flex");
     document.body.classList.remove("overflow-hidden");
     document.removeEventListener("keydown", handleEscapeKey);
-    categoryForm?.reset();
+    resetFormState();
 }
 
+const startEditingCategory = (row: HTMLTableRowElement, data: CategoryRowData) => {
+    editingCategoryId = data.id;
+    editingRow = row;
+
+    if (modalTitle) {
+        modalTitle.textContent = "Editar categoría";
+    }
+    if (submitButton) {
+        submitButton.textContent = "Actualizar";
+    }
+
+    categoryForm?.reset();
+
+    if (nameInput) {
+        nameInput.value = data.nombre;
+    }
+    if (descriptionInput) {
+        descriptionInput.value = data.descripcion;
+    }
+    if (imageInput) {
+        imageInput.value = data.imagenUrl ?? "";
+    }
+
+    openCategoryModal();
+};
+
 newCategoryButton?.addEventListener("click", () => {
+    resetFormState();
     openCategoryModal();
 });
 
@@ -95,7 +136,7 @@ const removePlaceholderRow = () => {
     placeholderRow?.remove();
 };
 
-const buildActionsCell = () => {
+const buildActionsCell = (row: HTMLTableRowElement, data: CategoryRowData) => {
     const actionsCell = document.createElement("td");
     actionsCell.className = "px-6 py-4 text-right text-sm";
 
@@ -104,12 +145,29 @@ const buildActionsCell = () => {
     editButton.className =
         "rounded-lg border border-primary px-3 py-1 text-primary transition hover:bg-primary hover:text-white";
     editButton.textContent = "Editar";
+    editButton.addEventListener("click", () => {
+        startEditingCategory(row, data);
+    });
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className =
         "ml-2 rounded-lg border border-danger px-3 py-1 text-danger transition hover:bg-danger hover:text-white";
     deleteButton.textContent = "Eliminar";
+    deleteButton.addEventListener("click", async () => {
+        const shouldDelete = window.confirm("¿Querés eliminar esta categoría?");
+        if (!shouldDelete) return;
+
+        await fetch(`${CATEGORY_API_URL}${data.id}/delete`, {
+            method: "DELETE"
+        });
+
+        if (editingCategoryId === data.id) {
+            closeCategoryModal();
+        }
+
+        row.remove();
+    });
 
     actionsCell.append(editButton, deleteButton);
     return actionsCell;
@@ -148,7 +206,13 @@ const createCategoryRow = ({ id, nombre, descripcion, imagenUrl }: CategoryRowDa
     descriptionCell.className = "px-6 py-4 text-sm text-dark/70";
     descriptionCell.textContent = descripcion;
 
-    row.append(idCell, imageCell, nameCell, descriptionCell, buildActionsCell());
+    row.append(
+        idCell,
+        imageCell,
+        nameCell,
+        descriptionCell,
+        buildActionsCell(row, { id, nombre, descripcion, imagenUrl })
+    );
     return row;
 };
 
@@ -159,28 +223,20 @@ const appendCategoryRow = (data: CategoryRowData) => {
 };
 
 const loadCategories = async () => {
-    try {
-        const response = await fetch(CATEGORY_API_URL);
+    const response = await fetch(CATEGORY_API_URL);
+    if (!response.ok) return;
 
-        if (!response.ok) {
-            console.error(`No se pudieron obtener las categorías. Código: ${response.status}`);
-            return;
-        }
+    const categories = (await response.json()) as CategoryRowData[];
+    if (!Array.isArray(categories)) return;
 
-        const categories = (await response.json()) as CategoryRowData[];
-        if (!Array.isArray(categories)) return;
-
-        categories.forEach((category) => {
-            appendCategoryRow({
-                id: category.id,
-                nombre: category.nombre,
-                descripcion: category.descripcion,
-                imagenUrl: category.imagenUrl
-            });
+    categories.forEach((category) => {
+        appendCategoryRow({
+            id: category.id,
+            nombre: category.nombre,
+            descripcion: category.descripcion,
+            imagenUrl: category.imagenUrl
         });
-    } catch (error) {
-        console.error("Error al obtener las categorías:", error);
-    }
+    });
 };
 
 loadCategories();
@@ -206,29 +262,39 @@ categoryForm?.addEventListener("submit", async (event) => {
         imagenUrl
     };
 
-    let categoryId: number | string = Date.now();
-
-    try {
-        const response = await fetch(CATEGORY_API_URL_CREATE, {
-            method: "POST",
+    if (editingCategoryId !== null) {
+        const response = await fetch(`${CATEGORY_API_URL}${editingCategoryId}/edit`, {
+            method: "PATCH",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-            console.error(`No se pudo crear la categoría. Código: ${response.status}`);
-        } else {
-            const body = (await response.json()) as { id?: number | string } | null;
-            if (body?.id !== undefined) {
-                categoryId = body.id;
-            }
+        if (!response.ok) return;
+
+        if (categoryTableBody && editingRow) {
+            const updatedRow = createCategoryRow({
+                id: editingCategoryId,
+                ...payload
+            });
+            categoryTableBody.replaceChild(updatedRow, editingRow);
         }
-    } catch (error) {
-        console.error("Error al crear la categoría:", error);
+
+        closeCategoryModal();
+        return;
     }
-    
+
+    const response = await fetch(CATEGORY_API_URL_CREATE, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const body = response.ok ? ((await response.json()) as { id?: number | string } | null) : null;
+    const categoryId = body?.id ?? Date.now();
 
     appendCategoryRow({
         id: categoryId,
@@ -237,5 +303,4 @@ categoryForm?.addEventListener("submit", async (event) => {
 
     closeCategoryModal();
     location.reload();
-    loadCategories();
 });
