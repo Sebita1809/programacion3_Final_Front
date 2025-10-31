@@ -38,7 +38,7 @@ if (!loginForm || !emailForm || !contrasenaForm) {
                 },
                 body: JSON.stringify(payload)
             });
-
+//comentario
             if (!response.ok) {
                 const message = await response.text();
                 throw new Error(message || "Credenciales inválidas");
