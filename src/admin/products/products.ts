@@ -29,7 +29,7 @@ const productNameInput = document.getElementById("product-name") as HTMLInputEle
 const productPriceInput = document.getElementById("product-price") as HTMLInputElement | null;
 const productDescriptionInput = document.getElementById("product-description") as HTMLTextAreaElement | null;
 const productImageInput = document.getElementById("product-image") as HTMLInputElement | null;
-const productStockSelect = document.getElementById("product-stock") as HTMLSelectElement | null;
+const productStockInput = document.getElementById("product-stock") as HTMLInputElement | null;
 const modalTitle = document.getElementById("product-modal-title") as HTMLHeadingElement | null;
 const categorySelect = document.getElementById("product-category") as HTMLSelectElement | null;
 
@@ -37,10 +37,8 @@ const submitButton =
     productForm?.querySelector<HTMLButtonElement>('button[type="submit"]') ?? null;
 
 let editingProductId: number | string | null = null;
-let editingRowData: ProductRowData | null = null;
 let cachedCategories: CategoryOption[] | null = null;
 
-const descriptionByName = new Map<string, string>();
 let productList: ProductRowData[] = [];
 
 const formatPrice = (value: number): string => {
@@ -105,7 +103,6 @@ const ensureCategoryOptions = async () => {
 
 const resetFormState = () => {
     editingProductId = null;
-    editingRowData = null;
     if (modalTitle) {
         modalTitle.textContent = "Nuevo producto";
     }
@@ -160,8 +157,6 @@ const startEditingProduct = async (row: HTMLTableRowElement) => {
     if (!rowData) return;
 
     editingProductId = rowData.id;
-    editingRowData = rowData;
-
     if (modalTitle) {
         modalTitle.textContent = "Editar producto";
     }
@@ -183,8 +178,12 @@ const startEditingProduct = async (row: HTMLTableRowElement) => {
     if (productImageInput) {
         productImageInput.value = rowData.imagenUrl ?? "";
     }
-    if (productStockSelect) {
-        productStockSelect.value = rowData.stock > 0 ? "SI" : "NO";
+    if (productStockInput) {
+        const sanitizedStock =
+            Number.isFinite(rowData.stock) && rowData.stock >= 0
+                ? Math.floor(rowData.stock)
+                : 0;
+        productStockInput.value = String(sanitizedStock);
     }
     if (categorySelect) {
         const categoryName = rowData.categoria?.nombre ?? "";
@@ -217,8 +216,6 @@ const handleDeleteProduct = async (row: HTMLTableRowElement) => {
     await fetch(`${PRODUCT_API_URL}${rowData.id}/delete`, {
         method: "DELETE"
     });
-
-    descriptionByName.delete(rowData.nombre);
 
     if (editingProductId === rowData.id) {
         closeProductModal();
@@ -298,7 +295,8 @@ const createProductRow = (data: ProductRowData): HTMLTableRowElement => {
 
     const stockCell = document.createElement("td");
     stockCell.className = "px-6 py-4 text-sm text-dark/80";
-    stockCell.textContent = data.stock > 0 ? "Sí" : "No";
+    const hasStock = Number(data.stock) > 0;
+    stockCell.textContent = hasStock ? "Sí" : "No";
 
     row.append(
         idCell,
@@ -347,14 +345,17 @@ const mapServerProduct = (product: ServerProductDTO): ProductRowData => {
             ? { id: product.categoria.id, nombre: product.categoria.nombre }
             : null;
 
+    const descripcion =
+        typeof product.descripcion === "string" ? product.descripcion : "";
+
     return {
         id: product.id,
         nombre: product.nombre,
         precio: Number.isFinite(precio) ? precio : 0,
-        stock: Number.isFinite(stock) ? stock : 0,
+        stock: Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : 0,
         imagenUrl: product.url ?? undefined,
         categoria,
-        descripcion: descriptionByName.get(product.nombre) ?? ""
+        descripcion
     };
 };
 
@@ -397,10 +398,12 @@ productForm?.addEventListener("submit", async (event) => {
     const precioValue = formData.get("precio")?.toString().trim() ?? "";
     const categoriaNombre = formData.get("categoria")?.toString().trim() ?? "";
     const imagenUrl = formData.get("imagenUrl")?.toString().trim() ?? "";
-    const stockRaw = formData.get("stock")?.toString() ?? "SI";
+    const stockValueRaw = formData.get("stock")?.toString().trim() ?? "";
 
     const precio = Number(precioValue);
-    const stock = stockRaw === "SI" ? 1 : 0;
+    const stockParsed = Number(stockValueRaw);
+    const stock =
+        Number.isFinite(stockParsed) && stockParsed >= 0 ? Math.floor(stockParsed) : 0;
 
     if (!nombre || Number.isNaN(precio) || !categoriaNombre) {
         return;
@@ -410,13 +413,12 @@ productForm?.addEventListener("submit", async (event) => {
         nombre,
         precio,
         stock,
+        descripcion,
         url: imagenUrl,
         categoria: categoriaNombre
     };
 
     if (editingProductId !== null) {
-        const previousName = editingRowData?.nombre ?? null;
-
         await fetch(`${PRODUCT_API_URL}${editingProductId}/edit`, {
             method: "PATCH",
             headers: {
@@ -424,11 +426,6 @@ productForm?.addEventListener("submit", async (event) => {
             },
             body: JSON.stringify(payload)
         });
-
-        if (previousName && previousName !== nombre) {
-            descriptionByName.delete(previousName);
-        }
-        descriptionByName.set(nombre, descripcion);
 
         await loadProducts();
         closeProductModal();
@@ -442,8 +439,6 @@ productForm?.addEventListener("submit", async (event) => {
         },
         body: JSON.stringify(payload)
     });
-
-    descriptionByName.set(nombre, descripcion);
 
     await loadProducts();
     closeProductModal();

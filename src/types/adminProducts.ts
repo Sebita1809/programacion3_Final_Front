@@ -9,6 +9,7 @@ export type ServerProductDTO = {
     precio: number | string;
     stock: number | string;
     url?: string | null;
+    descripcion?: string | null;
     categoria?: {
         id: number | string;
         nombre: string;

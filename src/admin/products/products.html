@@ -170,14 +170,16 @@
 
                 <div class="flex flex-col gap-2">
                   <label for="product-stock" class="text-sm font-semibold text-dark">Stock</label>
-                  <select
+                  <input
                     id="product-stock"
                     name="stock"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="0"
                     class="rounded-xl border border-gray/40 px-4 py-3 text-sm text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  >
-                    <option value="SI">Sí</option>
-                    <option value="NO">No</option>
-                  </select>
+                    required
+                  />
                 </div>
 
                 <div class="flex items-center justify-end gap-3 border-t border-gray/20 pt-4 md:col-span-2">
