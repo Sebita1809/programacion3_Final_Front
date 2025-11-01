@@ -1,9 +1,5 @@
 import { renderNavBarUserName } from "../../utils/navBarName";
-import type {
-    CategoryPayload,
-    CategoryRowData,
-    ServerCategoryDTO
-} from "../../types/adminCategories";
+import type { CategoryRowData } from "../../types/adminCategories";
 import {
     registerLogoutHandler,
     requireAdminSession
@@ -40,19 +36,6 @@ const submitButton =
 
 let editingCategoryId: number | string | null = null;
 let editingRow: HTMLTableRowElement | null = null;
-
-const normalizeImageUrl = (url: string | null | undefined): string | undefined => {
-    if (typeof url !== "string") return undefined;
-    const trimmedUrl = url.trim();
-    return trimmedUrl.length > 0 ? trimmedUrl : undefined;
-};
-
-const mapServerCategory = (category: ServerCategoryDTO): CategoryRowData => ({
-    id: category.id,
-    nombre: category.nombre,
-    descripcion: category.descripcion,
-    imagenUrl: normalizeImageUrl(category.url ?? category.imagenUrl ?? undefined)
-});
 
 const resetFormState = () => {
     editingCategoryId = null;
@@ -256,11 +239,16 @@ const loadCategories = async () => {
     const response = await fetch(CATEGORY_API_URL);
     if (!response.ok) return;
 
-    const categories = (await response.json()) as ServerCategoryDTO[];
+    const categories = (await response.json()) as Array<CategoryRowData & { url?: string | null }>;
     if (!Array.isArray(categories)) return;
 
-    categories.map(mapServerCategory).forEach((category) => {
-        appendCategoryRow(category);
+    categories.forEach((category) => {
+        appendCategoryRow({
+            id: category.id,
+            nombre: category.nombre,
+            descripcion: category.descripcion,
+            imagenUrl: category.imagenUrl ?? (category.url ?? undefined)
+        });
     });
 };
 
@@ -273,20 +261,21 @@ categoryForm?.addEventListener("submit", async (event) => {
     const formData = new FormData(categoryForm);
     const nombre = formData.get("nombre")?.toString().trim() ?? "";
     const descripcion = formData.get("descripcion")?.toString().trim() ?? "";
-    const imagenUrlValue = formData.get("imagenUrl");
-    const imagenUrl = typeof imagenUrlValue === "string" ? imagenUrlValue.trim() : "";
-    const normalizedImagenUrl = normalizeImageUrl(imagenUrl);
+    const imagenUrlRaw = formData.get("imagenUrl")?.toString().trim() ?? "";
+    const normalizedImageUrl = imagenUrlRaw.length > 0 ? imagenUrlRaw : undefined;
+
 
     if (!nombre || !descripcion) {
         console.warn("Nombre y descripción son obligatorios.");
         return;
     }
 
-    const payload: CategoryPayload = {
+    const requestPayload = {
         nombre,
         descripcion,
-        url: imagenUrl
+        url: imagenUrlRaw
     };
+
 
     // Fetch para editar la categoría
     if (editingCategoryId !== null) {
@@ -295,7 +284,7 @@ categoryForm?.addEventListener("submit", async (event) => {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(requestPayload)
         });
 
         if (!response.ok) return;
@@ -305,7 +294,7 @@ categoryForm?.addEventListener("submit", async (event) => {
                 id: editingCategoryId,
                 nombre,
                 descripcion,
-                imagenUrl: normalizedImagenUrl
+                imagenUrl: normalizedImageUrl
             });
             categoryTableBody.replaceChild(updatedRow, editingRow);
         }
@@ -320,7 +309,7 @@ categoryForm?.addEventListener("submit", async (event) => {
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(requestPayload)
     });
 
     const body = response.ok ? ((await response.json()) as { id?: number | string } | null) : null;
@@ -330,7 +319,7 @@ categoryForm?.addEventListener("submit", async (event) => {
         id: categoryId,
         nombre,
         descripcion,
-        imagenUrl: normalizedImagenUrl
+        imagenUrl: normalizedImageUrl
     });
 
     closeCategoryModal();
