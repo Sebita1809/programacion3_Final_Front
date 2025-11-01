@@ -37,3 +37,9 @@ export type ProductFormPayload = {
     url?: string;
     categoria: string;
 };
+
+export type ProductState = {
+    editingProductId: number | string | null;
+    productList: ProductRowData[];
+    categories: CategoryOption[];
+};

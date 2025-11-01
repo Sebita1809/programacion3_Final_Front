@@ -2,6 +2,7 @@ import { renderNavBarUserName } from "../../utils/navBarName";
 import { registerLogoutHandler, requireAdminSession } from "../../utils/auth";
 import type {
     CategoryOption,
+    ProductState,
     ProductFormPayload,
     ProductRowData,
     ServerProductDTO
@@ -44,12 +45,6 @@ const elements = {
 
 const submitButton =
     elements.form?.querySelector<HTMLButtonElement>('button[type="submit"]') ?? null;
-
-type ProductState = {
-    editingProductId: number | string | null;
-    productList: ProductRowData[];
-    categories: CategoryOption[];
-};
 
 const state: ProductState = {
     editingProductId: null,

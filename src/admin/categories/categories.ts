@@ -1,15 +1,12 @@
 import { renderNavBarUserName } from "../../utils/navBarName";
+import type { CategoryRowData } from "../../types/adminCategories";
 import {
     registerLogoutHandler,
     requireAdminSession
 } from "../../utils/auth";
-import type { CategoryPayload, CategoryRowData } from "../../types/adminCategories";
 
-const API_BASE_URL = "http://localhost:8080";
-const API_ENDPOINTS = {
-    categories: `${API_BASE_URL}/category/`,
-    create: `${API_BASE_URL}/category/create`
-} as const;
+const CATEGORY_API_URL = "http://localhost:8080/category/";
+const CATEGORY_API_URL_CREATE = "http://localhost:8080/category/create";
 
 const roleLabel = document.getElementById("navbar-role");
 const logoutButton = document.getElementById("logout-btn");
@@ -22,58 +19,39 @@ if (roleLabel) {
 }
 
 renderNavBarUserName(userNameContainer);
+
 registerLogoutHandler(logoutButton);
 
-const elements = {
-    newCategoryButton: document.getElementById("toggle-category-form") as HTMLButtonElement | null,
-    modal: document.getElementById("category-modal") as HTMLDivElement | null,
-    modalContent: document.getElementById("category-modal-content") as HTMLDivElement | null,
-    form: document.getElementById("category-form") as HTMLFormElement | null,
-    nameInput: document.getElementById("category-name") as HTMLInputElement | null,
-    tableBody: document.getElementById("category-table-body") as HTMLTableSectionElement | null,
-    descriptionInput: document.getElementById("category-description") as HTMLTextAreaElement | null,
-    imageInput: document.getElementById("category-image") as HTMLInputElement | null,
-    modalTitle: document.getElementById("category-modal-title") as HTMLHeadingElement | null
-} as const;
-
+const newCategoryButton = document.getElementById("toggle-category-form") as HTMLButtonElement | null;
+const categoryModal = document.getElementById("category-modal") as HTMLDivElement | null;
+const modalContent = document.getElementById("category-modal-content") as HTMLDivElement | null;
+const categoryForm = document.getElementById("category-form") as HTMLFormElement | null;
+const nameInput = document.getElementById("category-name") as HTMLInputElement | null;
+const categoryTableBody = document.getElementById("category-table-body") as HTMLTableSectionElement | null;
+const descriptionInput = document.getElementById("category-description") as HTMLTextAreaElement | null;
+const imageInput = document.getElementById("category-image") as HTMLInputElement | null;
+const modalTitle = document.getElementById("category-modal-title") as HTMLHeadingElement | null;
 const submitButton =
-    elements.form?.querySelector<HTMLButtonElement>('button[type="submit"]') ?? null;
+    categoryForm?.querySelector<HTMLButtonElement>('button[type="submit"]') ?? null;
 
-type CategoryState = {
-    editingCategoryId: number | string | null;
-    categories: CategoryRowData[];
-};
-
-const state: CategoryState = {
-    editingCategoryId: null,
-    categories: []
-};
-
-const serializeCategoryRowData = (data: CategoryRowData) => ({
-    ...data
-});
-
-const getRowData = (row: HTMLTableRowElement): CategoryRowData | null => {
-    const raw = row.dataset.category;
-    return raw ? (JSON.parse(raw) as CategoryRowData) : null;
-};
+let editingCategoryId: number | string | null = null;
+let editingRow: HTMLTableRowElement | null = null;
 
 const resetFormState = () => {
-    state.editingCategoryId = null;
-
-    if (elements.modalTitle) {
-        elements.modalTitle.textContent = "Nueva categoría";
+    editingCategoryId = null;
+    editingRow = null;
+    if (modalTitle) {
+        modalTitle.textContent = "Nueva categoría";
     }
     if (submitButton) {
         submitButton.textContent = "Guardar";
     }
-
-    elements.form?.reset();
+    categoryForm?.reset();
 };
 
 const getModalCloseButtons = (): HTMLButtonElement[] => {
-    if (!elements.modal) return [];
-    return Array.from(elements.modal.querySelectorAll<HTMLButtonElement>("[data-close-modal]"));
+    if (!categoryModal) return [];
+    return Array.from(categoryModal.querySelectorAll<HTMLButtonElement>("[data-close-modal]"));
 };
 
 const handleEscapeKey = (event: KeyboardEvent) => {
@@ -83,11 +61,10 @@ const handleEscapeKey = (event: KeyboardEvent) => {
 };
 
 const openCategoryModal = () => {
-    const { modal, nameInput } = elements;
-    if (!modal) return;
+    if (!categoryModal) return;
 
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
+    categoryModal.classList.remove("hidden");
+    categoryModal.classList.add("flex");
     document.body.classList.add("overflow-hidden");
     document.addEventListener("keydown", handleEscapeKey);
 
@@ -97,17 +74,69 @@ const openCategoryModal = () => {
 };
 
 function closeCategoryModal() {
-    const { modal } = elements;
-    if (!modal) return;
+    if (!categoryModal) return;
 
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
+    categoryModal.classList.add("hidden");
+    categoryModal.classList.remove("flex");
     document.body.classList.remove("overflow-hidden");
     document.removeEventListener("keydown", handleEscapeKey);
     resetFormState();
 }
 
-const buildActionsCell = (row: HTMLTableRowElement): HTMLTableCellElement => {
+const startEditingCategory = (row: HTMLTableRowElement, data: CategoryRowData) => {
+    editingCategoryId = data.id;
+    editingRow = row;
+
+    if (modalTitle) {
+        modalTitle.textContent = "Editar categoría";
+    }
+    if (submitButton) {
+        submitButton.textContent = "Actualizar";
+    }
+
+    categoryForm?.reset();
+
+    if (nameInput) {
+        nameInput.value = data.nombre;
+    }
+    if (descriptionInput) {
+        descriptionInput.value = data.descripcion;
+    }
+    if (imageInput) {
+        imageInput.value = data.imagenUrl ?? "";
+    }
+
+    openCategoryModal();
+};
+
+newCategoryButton?.addEventListener("click", () => {
+    resetFormState();
+    openCategoryModal();
+});
+
+getModalCloseButtons().forEach((button) => {
+    button.addEventListener("click", () => {
+        closeCategoryModal();
+    });
+});
+
+categoryModal?.addEventListener("click", (event) => {
+    if (event.target === categoryModal) {
+        closeCategoryModal();
+    }
+});
+
+modalContent?.addEventListener("click", (event) => {
+    event.stopPropagation();
+});
+
+const removePlaceholderRow = () => {
+    if (!categoryTableBody) return;
+    const placeholderRow = categoryTableBody.querySelector<HTMLTableRowElement>("[data-placeholder-row]");
+    placeholderRow?.remove();
+};
+
+const buildActionsCell = (row: HTMLTableRowElement, data: CategoryRowData) => {
     const actionsCell = document.createElement("td");
     actionsCell.className = "px-6 py-4 text-right text-sm";
 
@@ -117,7 +146,7 @@ const buildActionsCell = (row: HTMLTableRowElement): HTMLTableCellElement => {
         "rounded-lg border border-primary px-3 py-1 text-primary transition hover:bg-primary hover:text-white";
     editButton.textContent = "Editar";
     editButton.addEventListener("click", () => {
-        startEditingCategory(row);
+        startEditingCategory(row, data);
     });
 
     const deleteButton = document.createElement("button");
@@ -125,30 +154,40 @@ const buildActionsCell = (row: HTMLTableRowElement): HTMLTableCellElement => {
     deleteButton.className =
         "ml-2 rounded-lg border border-danger px-3 py-1 text-danger transition hover:bg-danger hover:text-white";
     deleteButton.textContent = "Eliminar";
-    deleteButton.addEventListener("click", () => {
-        void handleDeleteCategory(row);
+    deleteButton.addEventListener("click", async () => {
+        const shouldDelete = window.confirm("¿Querés eliminar esta categoría?");
+        if (!shouldDelete) return;
+
+        await fetch(`${CATEGORY_API_URL}${data.id}/delete`, {
+            method: "DELETE"
+        });
+
+        if (editingCategoryId === data.id) {
+            closeCategoryModal();
+        }
+
+        row.remove();
     });
 
     actionsCell.append(editButton, deleteButton);
     return actionsCell;
 };
 
-const createCategoryRow = (data: CategoryRowData): HTMLTableRowElement => {
+const createCategoryRow = ({ id, nombre, descripcion, imagenUrl }: CategoryRowData): HTMLTableRowElement => {
     const row = document.createElement("tr");
     row.className = "transition hover:bg-primary/5";
-    row.dataset.categoryId = String(data.id);
-    row.dataset.category = JSON.stringify(serializeCategoryRowData(data));
+    row.dataset.categoryId = String(id);
 
     const idCell = document.createElement("td");
     idCell.className = "px-6 py-4 text-sm font-medium text-dark/80";
-    idCell.textContent = String(data.id);
+    idCell.textContent = String(id);
 
     const imageCell = document.createElement("td");
     imageCell.className = "px-6 py-4";
-    if (data.imagenUrl) {
+    if (imagenUrl) {
         const image = document.createElement("img");
-        image.src = data.imagenUrl;
-        image.alt = data.nombre;
+        image.src = imagenUrl;
+        image.alt = nombre;
         image.className = "h-12 w-12 rounded-lg object-cover shadow-sm";
         imageCell.appendChild(image);
     } else {
@@ -161,128 +200,52 @@ const createCategoryRow = (data: CategoryRowData): HTMLTableRowElement => {
 
     const nameCell = document.createElement("td");
     nameCell.className = "px-6 py-4 text-sm font-semibold text-dark";
-    nameCell.textContent = data.nombre;
+    nameCell.textContent = nombre;
 
     const descriptionCell = document.createElement("td");
     descriptionCell.className = "px-6 py-4 text-sm text-dark/70";
-    descriptionCell.textContent = data.descripcion;
+    descriptionCell.textContent = descripcion;
 
-    row.append(idCell, imageCell, nameCell, descriptionCell, buildActionsCell(row));
+    row.append(
+        idCell,
+        imageCell,
+        nameCell,
+        descriptionCell,
+        buildActionsCell(row, { id, nombre, descripcion, imagenUrl })
+    );
     return row;
 };
 
-const renderCategoryTable = () => {
-    const { tableBody } = elements;
-    if (!tableBody) return;
-
-    tableBody.innerHTML = "";
-
-    if (state.categories.length === 0) {
-        const placeholderRow = document.createElement("tr");
-        placeholderRow.dataset.placeholderRow = "true";
-
-        const placeholderCell = document.createElement("td");
-        placeholderCell.colSpan = 5;
-        placeholderCell.className = "px-6 py-8 text-center text-sm text-dark/50";
-        placeholderCell.textContent = "Aún no creaste categorías.";
-        placeholderRow.appendChild(placeholderCell);
-
-        tableBody.appendChild(placeholderRow);
-        return;
-    }
-
-    state.categories.forEach((category) => {
-        tableBody.appendChild(createCategoryRow(category));
-    });
+const appendCategoryRow = (data: CategoryRowData) => {
+    if (!categoryTableBody) return;
+    removePlaceholderRow();
+    categoryTableBody.appendChild(createCategoryRow(data));
 };
 
 const loadCategories = async () => {
-    const response = await fetch(API_ENDPOINTS.categories);
-    if (!response.ok) {
-        state.categories = [];
-        renderCategoryTable();
-        return;
-    }
-
-    const categories = (await response.json()) as CategoryRowData[];
-    state.categories = Array.isArray(categories) ? categories : [];
-
-    renderCategoryTable();
-};
-
-const startEditingCategory = (row: HTMLTableRowElement) => {
-    const data = getRowData(row);
-    if (!data) return;
-
-    state.editingCategoryId = data.id;
-
-    if (elements.modalTitle) {
-        elements.modalTitle.textContent = "Editar categoría";
-    }
-    if (submitButton) {
-        submitButton.textContent = "Actualizar";
-    }
-
-    if (elements.nameInput) {
-        elements.nameInput.value = data.nombre;
-    }
-    if (elements.descriptionInput) {
-        elements.descriptionInput.value = data.descripcion;
-    }
-    if (elements.imageInput) {
-        elements.imageInput.value = data.imagenUrl ?? "";
-    }
-
-    openCategoryModal();
-};
-
-const handleDeleteCategory = async (row: HTMLTableRowElement) => {
-    const data = getRowData(row);
-    if (!data) return;
-
-    const shouldDelete = window.confirm("¿Querés eliminar esta categoría?");
-    if (!shouldDelete) return;
-
-    const response = await fetch(`${API_ENDPOINTS.categories}${data.id}/delete`, {
-        method: "DELETE"
-    });
-
+    const response = await fetch(CATEGORY_API_URL);
     if (!response.ok) return;
 
-    if (state.editingCategoryId === data.id) {
-        closeCategoryModal();
-    }
+    const categories = (await response.json()) as CategoryRowData[];
+    if (!Array.isArray(categories)) return;
 
-    await loadCategories();
+    categories.forEach((category) => {
+        appendCategoryRow({
+            id: category.id,
+            nombre: category.nombre,
+            descripcion: category.descripcion,
+            imagenUrl: category.imagenUrl
+        });
+    });
 };
 
-elements.newCategoryButton?.addEventListener("click", () => {
-    resetFormState();
-    openCategoryModal();
-});
+loadCategories();
 
-getModalCloseButtons().forEach((button) => {
-    button.addEventListener("click", () => {
-        closeCategoryModal();
-    });
-});
-
-elements.modal?.addEventListener("click", (event) => {
-    if (event.target === elements.modal) {
-        closeCategoryModal();
-    }
-});
-
-elements.modalContent?.addEventListener("click", (event) => {
-    event.stopPropagation();
-});
-
-elements.form?.addEventListener("submit", async (event) => {
+categoryForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = elements.form;
-    if (!form) return;
+    if (!categoryForm) return;
 
-    const formData = new FormData(form);
+    const formData = new FormData(categoryForm);
     const nombre = formData.get("nombre")?.toString().trim() ?? "";
     const descripcion = formData.get("descripcion")?.toString().trim() ?? "";
     const imagenUrlRaw = formData.get("imagenUrl")?.toString().trim() ?? "";
@@ -293,17 +256,14 @@ elements.form?.addEventListener("submit", async (event) => {
         return;
     }
 
-    const payload: CategoryPayload = {
+    const payload = {
         nombre,
-        descripcion
+        descripcion,
+        imagenUrl
     };
 
-    if (imagenUrl) {
-        payload.imagenUrl = imagenUrl;
-    }
-
-    if (state.editingCategoryId !== null) {
-        const response = await fetch(`${API_ENDPOINTS.categories}${state.editingCategoryId}/edit`, {
+    if (editingCategoryId !== null) {
+        const response = await fetch(`${CATEGORY_API_URL}${editingCategoryId}/edit`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json"
@@ -313,12 +273,19 @@ elements.form?.addEventListener("submit", async (event) => {
 
         if (!response.ok) return;
 
-        await loadCategories();
+        if (categoryTableBody && editingRow) {
+            const updatedRow = createCategoryRow({
+                id: editingCategoryId,
+                ...payload
+            });
+            categoryTableBody.replaceChild(updatedRow, editingRow);
+        }
+
         closeCategoryModal();
         return;
     }
 
-    const response = await fetch(API_ENDPOINTS.create, {
+    const response = await fetch(CATEGORY_API_URL_CREATE, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -326,11 +293,14 @@ elements.form?.addEventListener("submit", async (event) => {
         body: JSON.stringify(payload)
     });
 
-    if (!response.ok) return;
+    const body = response.ok ? ((await response.json()) as { id?: number | string } | null) : null;
+    const categoryId = body?.id ?? Date.now();
 
-    await loadCategories();
+    appendCategoryRow({
+        id: categoryId,
+        ...payload
+    });
+
     closeCategoryModal();
+    location.reload();
 });
-
-renderCategoryTable();
-void loadCategories();
