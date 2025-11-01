@@ -158,9 +158,20 @@ const buildActionsCell = (row: HTMLTableRowElement, data: CategoryRowData) => {
         const shouldDelete = window.confirm("¿Querés eliminar esta categoría?");
         if (!shouldDelete) return;
 
-        await fetch(`${CATEGORY_API_URL}${data.id}/delete`, {
-            method: "DELETE"
-        });
+        try {
+            const response = await fetch(`${CATEGORY_API_URL}${data.id}/delete`, {
+                method: "DELETE"
+            });
+
+            if (!response.ok) {
+                const errorMessage = (await response.text()) || "No se pudo eliminar la categoría.";
+                window.alert(errorMessage);
+                return;
+            }
+        } catch (error) {
+            window.alert("Ocurrió un problema al eliminar la categoría. Intentalo nuevamente.");
+            return;
+        }
 
         if (editingCategoryId === data.id) {
             closeCategoryModal();
