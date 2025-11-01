@@ -1,5 +1,9 @@
 import { renderNavBarUserName } from "../../utils/navBarName";
-import type { CategoryRowData } from "../../types/adminCategories";
+import type {
+    CategoryPayload,
+    CategoryRowData,
+    ServerCategoryDTO
+} from "../../types/adminCategories";
 import {
     registerLogoutHandler,
     requireAdminSession
@@ -36,6 +40,19 @@ const submitButton =
 
 let editingCategoryId: number | string | null = null;
 let editingRow: HTMLTableRowElement | null = null;
+
+const normalizeImageUrl = (url: string | null | undefined): string | undefined => {
+    if (typeof url !== "string") return undefined;
+    const trimmedUrl = url.trim();
+    return trimmedUrl.length > 0 ? trimmedUrl : undefined;
+};
+
+const mapServerCategory = (category: ServerCategoryDTO): CategoryRowData => ({
+    id: category.id,
+    nombre: category.nombre,
+    descripcion: category.descripcion,
+    imagenUrl: normalizeImageUrl(category.url ?? category.imagenUrl ?? undefined)
+});
 
 const resetFormState = () => {
     editingCategoryId = null;
@@ -158,6 +175,7 @@ const buildActionsCell = (row: HTMLTableRowElement, data: CategoryRowData) => {
         const shouldDelete = window.confirm("¿Querés eliminar esta categoría?");
         if (!shouldDelete) return;
 
+        // Fetch para eliminar la categoría
         try {
             const response = await fetch(`${CATEGORY_API_URL}${data.id}/delete`, {
                 method: "DELETE"
@@ -233,20 +251,16 @@ const appendCategoryRow = (data: CategoryRowData) => {
     categoryTableBody.appendChild(createCategoryRow(data));
 };
 
+// Fetch para cargar las categorías
 const loadCategories = async () => {
     const response = await fetch(CATEGORY_API_URL);
     if (!response.ok) return;
 
-    const categories = (await response.json()) as CategoryRowData[];
+    const categories = (await response.json()) as ServerCategoryDTO[];
     if (!Array.isArray(categories)) return;
 
-    categories.forEach((category) => {
-        appendCategoryRow({
-            id: category.id,
-            nombre: category.nombre,
-            descripcion: category.descripcion,
-            imagenUrl: category.imagenUrl
-        });
+    categories.map(mapServerCategory).forEach((category) => {
+        appendCategoryRow(category);
     });
 };
 
@@ -259,20 +273,22 @@ categoryForm?.addEventListener("submit", async (event) => {
     const formData = new FormData(categoryForm);
     const nombre = formData.get("nombre")?.toString().trim() ?? "";
     const descripcion = formData.get("descripcion")?.toString().trim() ?? "";
-    const imagenUrlRaw = formData.get("imagenUrl")?.toString().trim() ?? "";
-    const imagenUrl = imagenUrlRaw.length > 0 ? imagenUrlRaw : undefined;
+    const imagenUrlValue = formData.get("imagenUrl");
+    const imagenUrl = typeof imagenUrlValue === "string" ? imagenUrlValue.trim() : "";
+    const normalizedImagenUrl = normalizeImageUrl(imagenUrl);
 
     if (!nombre || !descripcion) {
         console.warn("Nombre y descripción son obligatorios.");
         return;
     }
 
-    const payload = {
+    const payload: CategoryPayload = {
         nombre,
         descripcion,
-        imagenUrl
+        url: imagenUrl
     };
 
+    // Fetch para editar la categoría
     if (editingCategoryId !== null) {
         const response = await fetch(`${CATEGORY_API_URL}${editingCategoryId}/edit`, {
             method: "PATCH",
@@ -287,7 +303,9 @@ categoryForm?.addEventListener("submit", async (event) => {
         if (categoryTableBody && editingRow) {
             const updatedRow = createCategoryRow({
                 id: editingCategoryId,
-                ...payload
+                nombre,
+                descripcion,
+                imagenUrl: normalizedImagenUrl
             });
             categoryTableBody.replaceChild(updatedRow, editingRow);
         }
@@ -296,6 +314,7 @@ categoryForm?.addEventListener("submit", async (event) => {
         return;
     }
 
+    // Fetch para crear la categoría
     const response = await fetch(CATEGORY_API_URL_CREATE, {
         method: "POST",
         headers: {
@@ -309,7 +328,9 @@ categoryForm?.addEventListener("submit", async (event) => {
 
     appendCategoryRow({
         id: categoryId,
-        ...payload
+        nombre,
+        descripcion,
+        imagenUrl: normalizedImagenUrl
     });
 
     closeCategoryModal();
