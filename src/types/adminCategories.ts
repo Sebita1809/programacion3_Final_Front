@@ -4,3 +4,9 @@ export type CategoryRowData = {
     descripcion: string;
     imagenUrl?: string;
 };
+
+export type CategoryPayload = {
+    nombre: string;
+    descripcion: string;
+    imagenUrl?: string;
+};

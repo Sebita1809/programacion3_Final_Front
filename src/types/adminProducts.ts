@@ -28,3 +28,12 @@ export type ProductRowData = {
     } | null;
     descripcion?: string;
 };
+
+export type ProductFormPayload = {
+    nombre: string;
+    precio: number;
+    stock: number;
+    descripcion?: string;
+    url?: string;
+    categoria: string;
+};

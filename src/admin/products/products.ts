@@ -1,10 +1,18 @@
 import { renderNavBarUserName } from "../../utils/navBarName";
 import { registerLogoutHandler, requireAdminSession } from "../../utils/auth";
-import type { CategoryOption, ProductRowData, ServerProductDTO } from "../../types/adminProducts";
+import type {
+    CategoryOption,
+    ProductFormPayload,
+    ProductRowData,
+    ServerProductDTO
+} from "../../types/adminProducts";
 
-const CATEGORY_API_URL = "http://localhost:8080/category/";
-const PRODUCT_API_URL = "http://localhost:8080/product/";
-const PRODUCT_API_URL_CREATE = "http://localhost:8080/product/create";
+const API_BASE_URL = "http://localhost:8080";
+const API_ENDPOINTS = {
+    categories: `${API_BASE_URL}/category/`,
+    products: `${API_BASE_URL}/product/`,
+    createProduct: `${API_BASE_URL}/product/create`
+} as const;
 
 const roleLabel = document.getElementById("navbar-role");
 const logoutButton = document.getElementById("logout-btn");
@@ -17,29 +25,37 @@ if (roleLabel) {
 }
 
 renderNavBarUserName(userNameContainer);
-
 registerLogoutHandler(logoutButton);
 
-const newProductButton = document.getElementById("toggle-product-form") as HTMLButtonElement | null;
-const productModal = document.getElementById("product-modal") as HTMLDivElement | null;
-const modalContent = document.getElementById("product-modal-content") as HTMLDivElement | null;
-const productForm = document.getElementById("product-form") as HTMLFormElement | null;
-const productTableBody = document.getElementById("product-table-body") as HTMLTableSectionElement | null;
-const productNameInput = document.getElementById("product-name") as HTMLInputElement | null;
-const productPriceInput = document.getElementById("product-price") as HTMLInputElement | null;
-const productDescriptionInput = document.getElementById("product-description") as HTMLTextAreaElement | null;
-const productImageInput = document.getElementById("product-image") as HTMLInputElement | null;
-const productStockInput = document.getElementById("product-stock") as HTMLInputElement | null;
-const modalTitle = document.getElementById("product-modal-title") as HTMLHeadingElement | null;
-const categorySelect = document.getElementById("product-category") as HTMLSelectElement | null;
+const elements = {
+    newProductButton: document.getElementById("toggle-product-form") as HTMLButtonElement | null,
+    modal: document.getElementById("product-modal") as HTMLDivElement | null,
+    modalContent: document.getElementById("product-modal-content") as HTMLDivElement | null,
+    form: document.getElementById("product-form") as HTMLFormElement | null,
+    tableBody: document.getElementById("product-table-body") as HTMLTableSectionElement | null,
+    nameInput: document.getElementById("product-name") as HTMLInputElement | null,
+    priceInput: document.getElementById("product-price") as HTMLInputElement | null,
+    descriptionInput: document.getElementById("product-description") as HTMLTextAreaElement | null,
+    imageInput: document.getElementById("product-image") as HTMLInputElement | null,
+    stockInput: document.getElementById("product-stock") as HTMLInputElement | null,
+    modalTitle: document.getElementById("product-modal-title") as HTMLHeadingElement | null,
+    categorySelect: document.getElementById("product-category") as HTMLSelectElement | null
+} as const;
 
 const submitButton =
-    productForm?.querySelector<HTMLButtonElement>('button[type="submit"]') ?? null;
+    elements.form?.querySelector<HTMLButtonElement>('button[type="submit"]') ?? null;
 
-let editingProductId: number | string | null = null;
-let cachedCategories: CategoryOption[] | null = null;
+type ProductState = {
+    editingProductId: number | string | null;
+    productList: ProductRowData[];
+    categories: CategoryOption[];
+};
 
-let productList: ProductRowData[] = [];
+const state: ProductState = {
+    editingProductId: null,
+    productList: [],
+    categories: []
+};
 
 const formatPrice = (value: number): string => {
     if (!Number.isFinite(value)) return "-";
@@ -61,6 +77,7 @@ const getRowData = (row: HTMLTableRowElement): ProductRowData | null => {
 };
 
 const populateCategorySelect = (categories: CategoryOption[]) => {
+    const { categorySelect } = elements;
     if (!categorySelect) return;
 
     categorySelect.innerHTML = "";
@@ -81,15 +98,20 @@ const populateCategorySelect = (categories: CategoryOption[]) => {
 };
 
 const ensureCategoryOptions = async () => {
-    if (cachedCategories) {
-        populateCategorySelect(cachedCategories);
+    if (state.categories.length > 0) {
+        populateCategorySelect(state.categories);
         return;
     }
 
-    const response = await fetch(CATEGORY_API_URL);
-    const categories = (await response.json()) as CategoryOption[];
+    const response = await fetch(API_ENDPOINTS.categories);
+    if (!response.ok) {
+        state.categories = [];
+        populateCategorySelect(state.categories);
+        return;
+    }
 
-    cachedCategories = Array.isArray(categories)
+    const categories = (await response.json()) as CategoryOption[];
+    state.categories = Array.isArray(categories)
         ? categories
               .filter((category) => typeof category?.id !== "undefined" && category?.nombre)
               .map((category) => ({
@@ -98,29 +120,31 @@ const ensureCategoryOptions = async () => {
               }))
         : [];
 
-    populateCategorySelect(cachedCategories);
+    populateCategorySelect(state.categories);
 };
 
 const resetFormState = () => {
-    editingProductId = null;
-    if (modalTitle) {
-        modalTitle.textContent = "Nuevo producto";
+    state.editingProductId = null;
+
+    if (elements.modalTitle) {
+        elements.modalTitle.textContent = "Nuevo producto";
     }
     if (submitButton) {
         submitButton.textContent = "Guardar";
     }
-    productForm?.reset();
-    if (categorySelect) {
-        const disabledOption = categorySelect.querySelector("option[value='']") ?? null;
-        if (disabledOption) {
-            (disabledOption as HTMLOptionElement).selected = true;
-        }
+
+    elements.form?.reset();
+
+    const disabledOption =
+        elements.categorySelect?.querySelector<HTMLOptionElement>("option[value='']");
+    if (disabledOption) {
+        disabledOption.selected = true;
     }
 };
 
 const getModalCloseButtons = (): HTMLButtonElement[] => {
-    if (!productModal) return [];
-    return Array.from(productModal.querySelectorAll<HTMLButtonElement>("[data-close-modal]"));
+    if (!elements.modal) return [];
+    return Array.from(elements.modal.querySelectorAll<HTMLButtonElement>("[data-close-modal]"));
 };
 
 const handleEscapeKey = (event: KeyboardEvent) => {
@@ -130,23 +154,25 @@ const handleEscapeKey = (event: KeyboardEvent) => {
 };
 
 const openProductModal = () => {
-    if (!productModal) return;
+    const { modal, nameInput } = elements;
+    if (!modal) return;
 
-    productModal.classList.remove("hidden");
-    productModal.classList.add("flex");
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
     document.body.classList.add("overflow-hidden");
     document.addEventListener("keydown", handleEscapeKey);
 
     window.requestAnimationFrame(() => {
-        productNameInput?.focus();
+        nameInput?.focus();
     });
 };
 
 function closeProductModal() {
-    if (!productModal) return;
+    const { modal } = elements;
+    if (!modal) return;
 
-    productModal.classList.add("hidden");
-    productModal.classList.remove("flex");
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
     document.body.classList.remove("overflow-hidden");
     document.removeEventListener("keydown", handleEscapeKey);
     resetFormState();
@@ -156,9 +182,10 @@ const startEditingProduct = async (row: HTMLTableRowElement) => {
     const rowData = getRowData(row);
     if (!rowData) return;
 
-    editingProductId = rowData.id;
-    if (modalTitle) {
-        modalTitle.textContent = "Editar producto";
+    state.editingProductId = rowData.id;
+
+    if (elements.modalTitle) {
+        elements.modalTitle.textContent = "Editar producto";
     }
     if (submitButton) {
         submitButton.textContent = "Actualizar";
@@ -166,40 +193,40 @@ const startEditingProduct = async (row: HTMLTableRowElement) => {
 
     await ensureCategoryOptions();
 
-    if (productNameInput) {
-        productNameInput.value = rowData.nombre;
+    if (elements.nameInput) {
+        elements.nameInput.value = rowData.nombre;
     }
-    if (productPriceInput) {
-        productPriceInput.value = Number.isFinite(rowData.precio) ? String(rowData.precio) : "";
+    if (elements.priceInput) {
+        elements.priceInput.value = Number.isFinite(rowData.precio) ? String(rowData.precio) : "";
     }
-    if (productDescriptionInput) {
-        productDescriptionInput.value = rowData.descripcion ?? "";
+    if (elements.descriptionInput) {
+        elements.descriptionInput.value = rowData.descripcion ?? "";
     }
-    if (productImageInput) {
-        productImageInput.value = rowData.imagenUrl ?? "";
+    if (elements.imageInput) {
+        elements.imageInput.value = rowData.imagenUrl ?? "";
     }
-    if (productStockInput) {
+    if (elements.stockInput) {
         const sanitizedStock =
             Number.isFinite(rowData.stock) && rowData.stock >= 0
                 ? Math.floor(rowData.stock)
                 : 0;
-        productStockInput.value = String(sanitizedStock);
+        elements.stockInput.value = String(sanitizedStock);
     }
-    if (categorySelect) {
+    if (elements.categorySelect) {
         const categoryName = rowData.categoria?.nombre ?? "";
         if (categoryName) {
-            const optionExists = Array.from(categorySelect.options).some(
+            const optionExists = Array.from(elements.categorySelect.options).some(
                 (option) => option.value === categoryName
             );
             if (!optionExists) {
                 const option = document.createElement("option");
                 option.value = categoryName;
                 option.textContent = categoryName;
-                categorySelect.appendChild(option);
+                elements.categorySelect.appendChild(option);
             }
-            categorySelect.value = categoryName;
+            elements.categorySelect.value = categoryName;
         } else {
-            categorySelect.value = "";
+            elements.categorySelect.value = "";
         }
     }
 
@@ -213,11 +240,13 @@ const handleDeleteProduct = async (row: HTMLTableRowElement) => {
     const shouldDelete = window.confirm("¿Querés eliminar este producto?");
     if (!shouldDelete) return;
 
-    await fetch(`${PRODUCT_API_URL}${rowData.id}/delete`, {
+    const response = await fetch(`${API_ENDPOINTS.products}${rowData.id}/delete`, {
         method: "DELETE"
     });
 
-    if (editingProductId === rowData.id) {
+    if (!response.ok) return;
+
+    if (state.editingProductId === rowData.id) {
         closeProductModal();
     }
 
@@ -313,11 +342,12 @@ const createProductRow = (data: ProductRowData): HTMLTableRowElement => {
 };
 
 const renderProductTable = () => {
-    if (!productTableBody) return;
+    const { tableBody } = elements;
+    if (!tableBody) return;
 
-    productTableBody.innerHTML = "";
+    tableBody.innerHTML = "";
 
-    if (productList.length === 0) {
+    if (state.productList.length === 0) {
         const placeholderRow = document.createElement("tr");
         placeholderRow.dataset.placeholderRow = "true";
 
@@ -327,13 +357,13 @@ const renderProductTable = () => {
         placeholderCell.textContent = "Aún no creaste productos.";
         placeholderRow.appendChild(placeholderCell);
 
-        productTableBody.appendChild(placeholderRow);
+        tableBody.appendChild(placeholderRow);
         return;
     }
 
-    productList.forEach((product) => {
+    state.productList.forEach((product) => {
         const row = createProductRow(product);
-        productTableBody.appendChild(row);
+        tableBody.appendChild(row);
     });
 };
 
@@ -345,28 +375,38 @@ const mapServerProduct = (product: ServerProductDTO): ProductRowData => {
             ? { id: product.categoria.id, nombre: product.categoria.nombre }
             : null;
 
-    const descripcion =
-        typeof product.descripcion === "string" ? product.descripcion : "";
+    const descripcionRaw =
+        typeof product.descripcion === "string" ? product.descripcion.trim() : "";
+    const imagenUrl =
+        typeof product.url === "string" && product.url.trim().length > 0
+            ? product.url.trim()
+            : undefined;
 
     return {
         id: product.id,
         nombre: product.nombre,
         precio: Number.isFinite(precio) ? precio : 0,
         stock: Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : 0,
-        imagenUrl: product.url ?? undefined,
+        imagenUrl,
         categoria,
-        descripcion
+        descripcion: descripcionRaw.length > 0 ? descripcionRaw : undefined
     };
 };
 
 async function loadProducts(): Promise<void> {
-    const response = await fetch(PRODUCT_API_URL);
+    const response = await fetch(API_ENDPOINTS.products);
+    if (!response.ok) {
+        state.productList = [];
+        renderProductTable();
+        return;
+    }
+
     const products = (await response.json()) as ServerProductDTO[];
-    productList = Array.isArray(products) ? products.map(mapServerProduct) : [];
+    state.productList = Array.isArray(products) ? products.map(mapServerProduct) : [];
     renderProductTable();
 }
 
-newProductButton?.addEventListener("click", async () => {
+elements.newProductButton?.addEventListener("click", async () => {
     resetFormState();
     await ensureCategoryOptions();
     openProductModal();
@@ -378,21 +418,22 @@ getModalCloseButtons().forEach((button) => {
     });
 });
 
-productModal?.addEventListener("click", (event) => {
-    if (event.target === productModal) {
+elements.modal?.addEventListener("click", (event) => {
+    if (event.target === elements.modal) {
         closeProductModal();
     }
 });
 
-modalContent?.addEventListener("click", (event) => {
+elements.modalContent?.addEventListener("click", (event) => {
     event.stopPropagation();
 });
 
-productForm?.addEventListener("submit", async (event) => {
+elements.form?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!productForm) return;
+    const form = elements.form;
+    if (!form) return;
 
-    const formData = new FormData(productForm);
+    const formData = new FormData(form);
     const nombre = formData.get("nombre")?.toString().trim() ?? "";
     const descripcion = formData.get("descripcion")?.toString().trim() ?? "";
     const precioValue = formData.get("precio")?.toString().trim() ?? "";
@@ -406,20 +447,26 @@ productForm?.addEventListener("submit", async (event) => {
         Number.isFinite(stockParsed) && stockParsed >= 0 ? Math.floor(stockParsed) : 0;
 
     if (!nombre || Number.isNaN(precio) || !categoriaNombre) {
+        console.warn("Nombre, precio y categoría son obligatorios.");
         return;
     }
 
-    const payload = {
+    const payload: ProductFormPayload = {
         nombre,
         precio,
         stock,
-        descripcion,
-        url: imagenUrl,
         categoria: categoriaNombre
     };
 
-    if (editingProductId !== null) {
-        await fetch(`${PRODUCT_API_URL}${editingProductId}/edit`, {
+    if (descripcion.length > 0) {
+        payload.descripcion = descripcion;
+    }
+    if (imagenUrl.length > 0) {
+        payload.url = imagenUrl;
+    }
+
+    if (state.editingProductId !== null) {
+        const response = await fetch(`${API_ENDPOINTS.products}${state.editingProductId}/edit`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json"
@@ -427,18 +474,22 @@ productForm?.addEventListener("submit", async (event) => {
             body: JSON.stringify(payload)
         });
 
+        if (!response.ok) return;
+
         await loadProducts();
         closeProductModal();
         return;
     }
 
-    await fetch(PRODUCT_API_URL_CREATE, {
+    const response = await fetch(API_ENDPOINTS.createProduct, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
         body: JSON.stringify(payload)
     });
+
+    if (!response.ok) return;
 
     await loadProducts();
     closeProductModal();
