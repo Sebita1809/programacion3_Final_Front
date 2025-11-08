@@ -35,7 +35,7 @@ try {
 }
 
 if (userData.rol !== "ADMIN") {
-    window.location.href = "/index.html";
+    window.location.href = "/src/store/home/home.html";
     throw new Error("Acceso denegado: el usuario no es administrador.");
 }
 

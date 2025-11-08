@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="" href="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SuperFood | Mis pedidos</title>
+  </head>
+  <body class="min-h-screen bg-light text-dark">
+    <header class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur border-b border-gray/40 z-50">
+      <div class="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-8">
+          <div class="flex items-center gap-4">
+            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-2xl font-extrabold text-white shadow-lg">SF</span>
+            <div class="flex flex-col leading-tight">
+              <span class="text-xl font-bold text-primary">SuperFood</span>
+              <span id="navbar-role" class="text-sm font-medium text-dark/70 uppercase tracking-widest">Usuario</span>
+            </div>
+          </div>
+          <nav class="flex flex-wrap items-center gap-2 text-sm font-semibold text-dark/70">
+            <a
+              href="../home/home.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Inicio
+            </a>
+            <a
+              href="./orders.html"
+              aria-current="page"
+              class="rounded-xl bg-primary/10 px-4 py-2 text-primary transition hover:bg-primary/20"
+            >
+              Mis pedidos
+            </a>
+            <a
+              href="../cart/cart.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Carrito
+            </a>
+            <a
+              id="nav-admin-link"
+              href="../../admin/adminHome/adminHome.html"
+              class="hidden rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Administración
+            </a>
+          </nav>
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="navbar-user-name-container" class="text-sm font-medium text-dark/80"></div>
+          <button
+            id="logout-btn"
+            type="button"
+            class="rounded-xl border border-danger px-5 py-2 text-sm font-semibold text-danger transition hover:bg-danger hover:text-white"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="min-h-screen bg-light px-4 pt-28 pb-16 text-dark sm:px-6">
+      <section class="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <header class="flex flex-col gap-2">
+          <p class="text-sm font-semibold uppercase tracking-widest text-dark/60">Historial</p>
+          <h1 class="text-3xl font-semibold text-dark">Mis pedidos</h1>
+          <p class="text-sm text-dark/60">
+            Consultá el estado de tus pedidos recientes, el método de pago y los productos incluidos.
+          </p>
+        </header>
+
+        <div
+          id="orders-empty"
+          class="flex flex-col items-center gap-3 rounded-xl border border-gray/30 bg-white px-6 py-10 text-center text-dark/70"
+        ></div>
+
+        <div id="orders-container" class="hidden flex flex-col gap-4"></div>
+      </section>
+    </main>
+
+    <script type="module" src="../../main.ts"></script>
+    <script type="module" src="./orders.ts"></script>
+  </body>
+</html>

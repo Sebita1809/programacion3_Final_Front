@@ -2,7 +2,7 @@ import type { IUser } from "../types/IUser";
 
 const USER_STORAGE_KEY = "userData";
 const LOGIN_PAGE_URL = "/src/pages/auth/login/login.html";
-const HOME_PAGE_URL = "/index.html";
+const HOME_PAGE_URL = "/src/store/home/home.html";
 
 const redirectWithError = (url: string, message: string): never => {
     window.location.href = url;

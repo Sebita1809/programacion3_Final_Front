@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="" href="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SuperFood | Carrito</title>
+  </head>
+  <body class="min-h-screen bg-light text-dark">
+    <header class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur border-b border-gray/40 z-50">
+      <div class="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-8">
+          <div class="flex items-center gap-4">
+            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-2xl font-extrabold text-white shadow-lg">SF</span>
+            <div class="flex flex-col leading-tight">
+              <span class="text-xl font-bold text-primary">SuperFood</span>
+              <span id="navbar-role" class="text-sm font-medium text-dark/70 uppercase tracking-widest">Usuario</span>
+            </div>
+          </div>
+          <nav class="flex flex-wrap items-center gap-2 text-sm font-semibold text-dark/70">
+            <a
+              href="../home/home.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Inicio
+            </a>
+            <a
+              href="../orders/orders.html"
+              class="rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Mis pedidos
+            </a>
+            <a
+              href="./cart.html"
+              aria-current="page"
+              class="rounded-xl bg-primary/10 px-4 py-2 text-primary transition hover:bg-primary/20"
+            >
+              Carrito
+            </a>
+            <a
+              id="nav-admin-link"
+              href="../../admin/adminHome/adminHome.html"
+              class="hidden rounded-xl px-4 py-2 transition hover:bg-primary/10 hover:text-primary"
+            >
+              Administración
+            </a>
+          </nav>
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="navbar-user-name-container" class="text-sm font-medium text-dark/80"></div>
+          <button
+            id="logout-btn"
+            type="button"
+            class="rounded-xl border border-danger px-5 py-2 text-sm font-semibold text-danger transition hover:bg-danger hover:text-white"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="min-h-screen bg-light px-4 pt-28 pb-16 text-dark sm:px-6">
+      <div class="mx-auto flex w-full max-w-5xl flex-col gap-8">
+        <header class="flex flex-col gap-1">
+          <p class="text-sm font-semibold uppercase tracking-widest text-dark/60">Tu selección</p>
+          <h1 class="text-3xl font-semibold text-dark">Carrito de compras</h1>
+          <p class="text-sm text-dark/60">Revisá tus productos antes de confirmar el pedido.</p>
+        </header>
+
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <section class="flex flex-col gap-4">
+            <div
+              id="cart-empty"
+              class="flex flex-col items-center gap-3 rounded-xl border border-gray/30 bg-white px-6 py-10 text-center text-dark/70"
+            ></div>
+
+            <div id="cart-items" class="hidden flex flex-col gap-3"></div>
+          </section>
+
+          <aside
+            id="cart-summary"
+            class="hidden h-fit rounded-xl border border-gray/30 bg-white p-5"
+          >
+            <h2 class="mb-4 text-xl font-semibold text-dark">Resumen del pedido</h2>
+            <div class="flex flex-col gap-3 text-sm text-dark/70">
+              <div class="flex items-center justify-between">
+                <span>Subtotal</span>
+                <span id="cart-summary-subtotal" class="font-semibold text-dark">—</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Envío</span>
+                <span id="cart-summary-shipping" class="font-semibold text-dark">—</span>
+              </div>
+              <div class="my-3 border-t border-gray/20"></div>
+              <div class="flex items-center justify-between text-base font-semibold text-dark">
+                <span>Total</span>
+                <span id="cart-summary-total" class="text-xl text-primary">—</span>
+              </div>
+            </div>
+            <div class="mt-6 flex flex-col gap-3">
+              <button
+                id="clear-cart"
+                type="button"
+                class="rounded-xl border border-gray/40 px-4 py-2 text-sm font-semibold text-dark/70 transition hover:bg-gray/10"
+              >
+                Vaciar carrito
+              </button>
+              <button
+                id="checkout-button"
+                type="button"
+                class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled
+              >
+                Finalizar compra
+              </button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <div
+      id="checkout-modal"
+      class="fixed inset-0 z-50 hidden items-center justify-center bg-dark/30 px-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        id="checkout-modal-content"
+        class="relative w-full max-w-lg rounded-2xl bg-white p-8 shadow-lg"
+        role="document"
+      >
+        <button
+          id="checkout-modal-close"
+          type="button"
+          data-close-modal
+          class="absolute right-4 top-4 text-sm font-semibold text-dark/60 transition hover:text-dark"
+        >
+          Cerrar
+        </button>
+        <h2 class="mb-2 text-2xl font-semibold text-dark">Confirmar pedido</h2>
+        <p class="text-sm text-dark/60">
+          Revisá tus datos de entrega y método de pago para finalizar la compra.
+        </p>
+
+        <div class="my-4 rounded-xl bg-primary/5 px-4 py-3 text-sm font-semibold text-primary">
+          Total a pagar: <span id="checkout-modal-total">—</span>
+        </div>
+
+        <form id="checkout-form" class="flex flex-col gap-4">
+          <label class="flex flex-col gap-2 text-sm">
+            <span class="font-semibold text-dark">Teléfono de contacto</span>
+            <input
+              id="checkout-phone"
+              type="tel"
+              placeholder="Ej. 1122334455"
+              class="rounded-xl border border-gray/40 px-4 py-3 text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              required
+            />
+          </label>
+
+          <label class="flex flex-col gap-2 text-sm">
+            <span class="font-semibold text-dark">Dirección de entrega</span>
+            <textarea
+              id="checkout-address"
+              rows="3"
+              placeholder="Calle 123, piso/departamento"
+              class="rounded-xl border border-gray/40 px-4 py-3 text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              required
+            ></textarea>
+          </label>
+
+          <label class="flex flex-col gap-2 text-sm">
+            <span class="font-semibold text-dark">Método de pago</span>
+            <select
+              id="checkout-payment"
+              class="rounded-xl border border-gray/40 px-4 py-3 text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              required
+            >
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="transferencia">Transferencia</option>
+            </select>
+          </label>
+
+          <label class="flex flex-col gap-2 text-sm">
+            <span class="font-semibold text-dark">Notas adicionales (opcional)</span>
+            <textarea
+              id="checkout-notes"
+              rows="3"
+              placeholder="Instrucciones para la entrega"
+              class="rounded-xl border border-gray/40 px-4 py-3 text-dark shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            ></textarea>
+          </label>
+
+          <div class="mt-4 flex justify-end gap-3 border-t border-gray/20 pt-4">
+            <button
+              type="button"
+              data-close-modal
+              class="rounded-xl border border-gray/40 px-4 py-2 text-sm font-semibold text-dark/70 transition hover:bg-gray/10"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
+            >
+              Confirmar pedido
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="../../main.ts"></script>
+    <script type="module" src="./cart.ts"></script>
+  </body>
+</html>

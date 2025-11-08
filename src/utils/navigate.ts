@@ -1,7 +1,7 @@
 import type { IUser } from "../types/IUser";
 import { getStoredUser } from "./auth";
 
-const USER_HOME_URL = "/index.html";
+const USER_HOME_URL = "/src/store/home/home.html";
 const ADMIN_HOME_URL = "/src/admin/adminHome/adminHome.html";
 
 export const redirect = (url: string) => {
