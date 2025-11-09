@@ -143,6 +143,20 @@ const updateOrderStatus = async (orderId: number, nextStatus: OrderStatus): Prom
     }
 };
 
+const getPaymentMethodLabel = (metodo?: string | null): string => {
+    if (!metodo) return "No indicado";
+    switch (metodo.toLowerCase()) {
+        case "efectivo":
+            return "Efectivo";
+        case "tarjeta":
+            return "Tarjeta";
+        case "transferencia":
+            return "Transferencia";
+        default:
+            return metodo;
+    }
+};
+
 const renderOrders = (orders: IOrder[]): void => {
     const { list, emptyState } = elements;
     if (!list || !emptyState) return;
@@ -156,117 +170,218 @@ const renderOrders = (orders: IOrder[]): void => {
     emptyState.classList.add("hidden");
     list.innerHTML = "";
 
-    orders.forEach((order) => {
+    // Ordenar por fecha más reciente primero
+    const sortedOrders = [...orders].sort((a, b) => {
+        if (!a.fecha || !b.fecha) return 0;
+        return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+    });
+
+    sortedOrders.forEach((order) => {
         const card = document.createElement("article");
         card.className =
-            "flex flex-col gap-4 rounded-2xl border border-gray/30 bg-white p-6 shadow-sm";
+            "flex flex-col gap-4 rounded-2xl border border-gray/20 bg-white p-6 shadow-sm transition hover:shadow-md cursor-pointer";
 
+        // Header compacto con título y badge
         const header = document.createElement("div");
-        header.className = "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between";
+        header.className = "flex items-center justify-between";
 
-        const title = document.createElement("div");
-        title.className = "flex flex-col";
-        const heading = document.createElement("h3");
-        heading.className = "text-lg font-semibold text-dark";
-        heading.textContent = `Pedido #${order.id}`;
-        const date = document.createElement("span");
-        date.className = "text-sm text-dark/60";
-        date.textContent = formatDate(order.fecha);
-        title.append(heading, date);
+        const titleSection = document.createElement("div");
+        titleSection.className = "flex flex-col gap-1";
+        
+        const orderTitle = document.createElement("h3");
+        orderTitle.className = "text-base font-semibold text-dark";
+        orderTitle.textContent = `Pedido #${order.id}`;
 
-        const badgeConfig = getStatusConfig(order.estado);
-        const badge = document.createElement("span");
-        badge.className = `inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${badgeConfig.className}`;
-        badge.textContent = badgeConfig.label;
+        const clientInfo = document.createElement("p");
+        clientInfo.className = "text-sm text-dark/60";
+        clientInfo.textContent = `Cliente: Usuario #${order.id}`;
 
-        header.append(title, badge);
+        const dateInfo = document.createElement("p");
+        dateInfo.className = "text-xs text-dark/50";
+        dateInfo.textContent = formatDate(order.fecha);
 
-        const info = document.createElement("div");
-        info.className = "grid gap-2 border-t border-gray/20 pt-4 text-sm text-dark/70";
-        info.innerHTML = `
-            <div><span class="font-semibold text-dark">Dirección:</span> ${order.direccion ?? "Sin datos"}</div>
-            <div><span class="font-semibold text-dark">Teléfono:</span> ${order.telefono ?? "No disponible"}</div>
-            <div><span class="font-semibold text-dark">Pago:</span> ${order.metodoPago ?? "No indicado"}</div>
-        `;
+        titleSection.append(orderTitle, clientInfo, dateInfo);
 
-        const detailsWrapper = document.createElement("div");
-        detailsWrapper.className = "flex flex-col gap-2 border-t border-gray/20 pt-4";
-        if (order.detalles.length > 0) {
-            const detailTitle = document.createElement("h4");
-            detailTitle.className = "text-sm font-semibold text-dark";
-            detailTitle.textContent = "Productos";
-            detailsWrapper.append(detailTitle);
+        const statusConfig = getStatusConfig(order.estado);
+        const statusBadge = document.createElement("span");
+        statusBadge.className = `inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase ${statusConfig.className}`;
+        statusBadge.textContent = statusConfig.label;
 
-            const listEl = document.createElement("ul");
-            listEl.className = "flex flex-col gap-1 text-sm text-dark/70";
-            order.detalles.forEach((detalle) => {
-                const item = document.createElement("li");
-                item.className = "flex items-center justify-between";
-                const label = document.createElement("span");
-                label.textContent = `${detalle.producto ?? "Producto"} × ${detalle.cantidad}`;
-                const price = document.createElement("span");
-                if (typeof detalle.subtotal === "number") {
-                    price.className = "font-semibold text-primary";
-                    price.textContent = formatCurrency(detalle.subtotal);
-                } else {
-                    price.textContent = "—";
-                }
-                item.append(label, price);
-                listEl.appendChild(item);
-            });
-            detailsWrapper.append(listEl);
-        } else {
-            const emptyDetails = document.createElement("p");
-            emptyDetails.className = "text-sm text-dark/50";
-            emptyDetails.textContent = "Este pedido no tiene detalles cargados.";
-            detailsWrapper.append(emptyDetails);
-        }
+        header.append(titleSection, statusBadge);
 
+        // Resumen de productos con icono
+        const productCount = document.createElement("div");
+        productCount.className = "flex items-center gap-2 text-sm text-dark/70";
+        const totalItems = order.detalles?.reduce((sum, d) => sum + d.cantidad, 0) || 0;
+        productCount.textContent = `${totalItems} producto(s)`;
+
+        // Footer con total destacado
         const footer = document.createElement("div");
-        footer.className =
-            "flex flex-col gap-3 border-t border-gray/20 pt-4 sm:flex-row sm:items-center sm:justify-between";
+        footer.className = "flex items-center justify-between pt-2 border-t border-gray/10";
 
-        const totalLabel = document.createElement("span");
-        totalLabel.className = "text-xl font-bold text-primary";
-        totalLabel.textContent = `Total: ${formatCurrency(order.total)}`;
+        const totalValue = document.createElement("span");
+        totalValue.className = "text-xl font-bold text-primary";
+        totalValue.textContent = formatCurrency(order.total);
 
-        const controls = document.createElement("div");
-        controls.className = "flex flex-col gap-2 sm:flex-row sm:items-center";
+        footer.append(productCount, totalValue);
 
-        const select = document.createElement("select");
-        select.className =
-            "rounded-xl border border-gray/40 px-4 py-2 text-sm font-medium text-dark focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30";
-        STATUS_OPTIONS.forEach((status) => {
-            const option = document.createElement("option");
-            option.value = status;
-            option.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-            option.selected = status === order.estado;
-            select.appendChild(option);
-        });
-        select.disabled = state.updating.has(order.id);
+        // Agregar todo al card
+        card.append(header, footer);
 
-        const updateBtn = document.createElement("button");
-        updateBtn.type = "button";
-        updateBtn.className =
-            "rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:opacity-60";
-        updateBtn.textContent = "Actualizar estado";
-        updateBtn.disabled = state.updating.has(order.id);
-
-        updateBtn.addEventListener("click", () => {
-            const nextStatus = select.value as OrderStatus;
-            if (nextStatus === order.estado) {
-                window.alert("El pedido ya tiene ese estado.");
-                return;
-            }
-            updateOrderStatus(order.id, nextStatus);
+        // Click para ver detalle (modal)
+        card.addEventListener("click", () => {
+            showOrderDetailModal(order);
         });
 
-        controls.append(select, updateBtn);
-        footer.append(totalLabel, controls);
-
-        card.append(header, info, detailsWrapper, footer);
         list.appendChild(card);
     });
+};
+
+const showOrderDetailModal = (order: IOrder): void => {
+    // Crear modal
+    const modal = document.createElement("div");
+    modal.className = "fixed inset-0 z-50 flex items-center justify-center bg-dark/30 px-4";
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+
+    // Contenido del modal
+    const modalContent = document.createElement("div");
+    modalContent.className = "relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-8 shadow-lg";
+
+    // Botón cerrar
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "absolute right-4 top-4 text-2xl font-bold text-dark/60 transition hover:text-dark";
+    closeBtn.textContent = "×";
+    closeBtn.addEventListener("click", () => modal.remove());
+
+    // Título
+    const modalTitle = document.createElement("h2");
+    modalTitle.className = "text-xl font-bold text-dark mb-4";
+    modalTitle.textContent = `Detalle del Pedido #${order.id}`;
+
+    // Información del cliente
+    const clientSection = document.createElement("div");
+    clientSection.className = "mb-4 text-sm";
+    clientSection.innerHTML = `
+        <div class="mb-2"><span class="font-semibold text-dark">Cliente:</span> <span class="text-dark/70">Usuario #${order.id}</span></div>
+        <div class="mb-2"><span class="font-semibold text-dark">Fecha:</span> <span class="text-dark/70">${formatDate(order.fecha)}</span></div>
+        <div><span class="font-semibold text-dark">Teléfono:</span> <span class="text-dark/70">${order.telefono || 'No disponible'}</span></div>
+        <div><span class="font-semibold text-dark">Dirección:</span> <span class="text-dark/70">${order.direccion || 'No especificada'}</span></div>
+        <div><span class="font-semibold text-dark">Método de pago:</span> <span class="text-dark/70">${getPaymentMethodLabel(order.metodoPago)}</span></div>
+    `;
+
+    // Sección de productos
+    const productsSection = document.createElement("div");
+    productsSection.className = "mb-6 border-t border-gray/20 pt-4";
+    
+    const productsTitle = document.createElement("h3");
+    productsTitle.className = "text-base font-semibold text-dark mb-3";
+    productsTitle.textContent = "Productos:";
+    
+    productsSection.appendChild(productsTitle);
+
+    if (order.detalles && order.detalles.length > 0) {
+        order.detalles.forEach((detalle) => {
+            const productRow = document.createElement("div");
+            productRow.className = "flex items-center justify-between py-2 text-sm border-b border-gray/10";
+            
+            const productInfo = document.createElement("div");
+            productInfo.className = "flex-1";
+            productInfo.innerHTML = `
+                <div class="font-medium text-dark">${detalle.producto || 'Producto'}</div>
+                <div class="text-xs text-dark/60">Cantidad: ${detalle.cantidad} × ${formatCurrency((detalle.subtotal || 0) / detalle.cantidad)}</div>
+            `;
+            
+            const productPrice = document.createElement("div");
+            productPrice.className = "font-semibold text-primary";
+            productPrice.textContent = formatCurrency(detalle.subtotal || 0);
+            
+            productRow.append(productInfo, productPrice);
+            productsSection.appendChild(productRow);
+        });
+    }
+
+    // Resumen de totales
+    const subtotal = order.total - 500;
+    const shipping = 500;
+    
+    const totalsSection = document.createElement("div");
+    totalsSection.className = "space-y-2 mb-6 pt-4 border-t border-gray/20";
+    totalsSection.innerHTML = `
+        <div class="flex justify-between text-sm">
+            <span class="text-dark/70">Subtotal:</span>
+            <span class="font-medium text-dark">${formatCurrency(subtotal)}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+            <span class="text-dark/70">Envío:</span>
+            <span class="font-medium text-dark">${formatCurrency(shipping)}</span>
+        </div>
+        <div class="flex justify-between text-lg font-bold pt-2 border-t border-gray/20">
+            <span class="text-primary">Total:</span>
+            <span class="text-primary">${formatCurrency(order.total)}</span>
+        </div>
+    `;
+
+    // Sección de cambio de estado
+    const stateSection = document.createElement("div");
+    stateSection.className = "mb-4 pt-4 border-t border-gray/20";
+    
+    const stateLabel = document.createElement("label");
+    stateLabel.className = "block text-sm font-semibold text-dark mb-2";
+    stateLabel.textContent = "Cambiar Estado:";
+    
+    const stateSelect = document.createElement("select");
+    stateSelect.className = "w-full rounded-xl border border-gray/40 px-4 py-2 text-sm font-medium text-dark focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 mb-3";
+    
+    STATUS_OPTIONS.forEach((status) => {
+        const option = document.createElement("option");
+        option.value = status;
+        option.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        option.selected = status === order.estado;
+        stateSelect.appendChild(option);
+    });
+
+    const updateBtn = document.createElement("button");
+    updateBtn.type = "button";
+    updateBtn.className = "w-full rounded-xl bg-teal-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-600";
+    updateBtn.textContent = "Actualizar Estado";
+    
+    updateBtn.addEventListener("click", async () => {
+        const nextStatus = stateSelect.value as OrderStatus;
+        if (nextStatus === order.estado) {
+            window.alert("El pedido ya tiene ese estado.");
+            return;
+        }
+        
+        updateBtn.disabled = true;
+        updateBtn.textContent = "Actualizando...";
+        
+        try {
+            await updateOrderStatus(order.id, nextStatus);
+            modal.remove();
+        } catch (error) {
+            updateBtn.disabled = false;
+            updateBtn.textContent = "Actualizar Estado";
+        }
+    });
+
+    stateSection.append(stateLabel, stateSelect, updateBtn);
+
+    // Ensamblar modal
+    modalContent.append(
+        closeBtn,
+        modalTitle,
+        clientSection,
+        productsSection,
+        totalsSection,
+        stateSection
+    );
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
 };
 
 const fetchOrders = async (): Promise<void> => {
@@ -282,17 +397,18 @@ const fetchOrders = async (): Promise<void> => {
         }
 
         const raw = await response.json();
+        
         state.orders = Array.isArray(raw)
             ? raw
                   .map((item) => normalizeOrder(item))
                   .filter((order): order is IOrder => Boolean(order))
             : [];
+        
         renderOrders(state.orders);
     } catch (error) {
         console.error("No se pudieron cargar los pedidos:", error);
         state.orders = [];
         renderOrders(state.orders);
-        window.alert("No se pudieron cargar los pedidos. Verificá el servidor.");
     }
 };
 

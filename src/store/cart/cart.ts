@@ -6,7 +6,9 @@ import {
 } from "../../utils/cartStorage";
 import { renderNavBarUserName } from "../../utils/navBarName";
 import { getStoredUserOrRedirect, registerLogoutHandler } from "../../utils/auth";
+import { API_ENDPOINTS } from "../../utils/api";
 import type { IUser } from "../../types/IUser";
+import type { IOrderCreateRequest, IOrderDetailRequest } from "../../types/IOrders";
 
 const elements = {
     itemsContainer: document.getElementById("cart-items") as HTMLDivElement | null,
@@ -21,7 +23,10 @@ const elements = {
     checkoutModalContent: document.getElementById("checkout-modal-content") as HTMLDivElement | null,
     checkoutModalClose: document.getElementById("checkout-modal-close") as HTMLButtonElement | null,
     checkoutModalTotal: document.getElementById("checkout-modal-total") as HTMLSpanElement | null,
-    checkoutForm: document.getElementById("checkout-form") as HTMLFormElement | null
+    checkoutForm: document.getElementById("checkout-form") as HTMLFormElement | null,
+    checkoutPhone: document.getElementById("checkout-phone") as HTMLInputElement | null,
+    checkoutAddress: document.getElementById("checkout-address") as HTMLTextAreaElement | null,
+    checkoutPayment: document.getElementById("checkout-payment") as HTMLSelectElement | null
 };
 
 const setupNavBar = (user: IUser): void => {
@@ -272,10 +277,118 @@ const init = (): void => {
         });
     });
 
-    elements.checkoutForm?.addEventListener("submit", (event) => {
+    elements.checkoutForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
-        window.alert("Este botón todavía no tiene funcionalidad.");
+        await handleCheckoutSubmit();
     });
+};
+
+const handleCheckoutSubmit = async (): Promise<void> => {
+    const { checkoutForm, checkoutPhone, checkoutAddress, checkoutPayment } = elements;
+    
+    if (!checkoutForm || !checkoutPhone || !checkoutAddress || !checkoutPayment) {
+        window.alert("Error: Formulario no disponible.");
+        return;
+    }
+
+    const user = getStoredUserOrRedirect();
+    
+    if (!user.id || !Number.isFinite(user.id)) {
+        window.alert("Error: No se pudo identificar el usuario. Por favor, volvé a iniciar sesión.");
+        return;
+    }
+
+    const telefono = checkoutPhone.value.trim();
+    const direccion = checkoutAddress.value.trim();
+    const metodoPago = checkoutPayment.value as "efectivo" | "tarjeta" | "transferencia";
+
+    if (!telefono || !direccion || !metodoPago) {
+        window.alert("Por favor, completá todos los campos obligatorios.");
+        return;
+    }
+
+    const telefonoNumerico = Number(telefono.replace(/\D/g, ""));
+    if (!Number.isFinite(telefonoNumerico) || telefonoNumerico <= 0) {
+        window.alert("Por favor, ingresá un teléfono válido.");
+        return;
+    }
+
+    const cartItems = getCartItems();
+    if (cartItems.length === 0) {
+        window.alert("El carrito está vacío.");
+        closeCheckoutModal();
+        return;
+    }
+
+    const detalles: IOrderDetailRequest[] = cartItems.map((item) => ({
+        idProducto: Number(item.id),
+        cantidad: item.quantity
+    }));
+
+    const orderRequest: IOrderCreateRequest = {
+        idUsuario: user.id,
+        telefono: telefonoNumerico,
+        direccion,
+        metodoPago,
+        detalles
+    };
+
+    try {
+        const submitButton = checkoutForm.querySelector<HTMLButtonElement>('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = "Procesando...";
+        }
+
+        const response = await fetch(API_ENDPOINTS.createOrder, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(orderRequest)
+        });
+
+        if (!response.ok) {
+            let errorMessage = "No se pudo crear el pedido.";
+            
+            try {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const errorJson = await response.json();
+                    errorMessage = errorJson.message || errorJson.error || JSON.stringify(errorJson);
+                } else {
+                    const errorText = await response.text();
+                    errorMessage = errorText;
+                }
+            } catch (parseError) {
+                console.error("Error al parsear respuesta de error:", parseError);
+            }
+            
+            throw new Error(errorMessage);
+        }
+
+        await response.json();
+
+        window.alert("¡Pedido confirmado exitosamente! Podés verlo en 'Mis pedidos'.");
+        
+        clearCart();
+        renderCartItems(getCartItems());
+        closeCheckoutModal();
+
+        setTimeout(() => {
+            window.location.href = "../orders/orders.html";
+        }, 500);
+    } catch (error) {
+        console.error("Error al crear el pedido:", error);
+        const message = error instanceof Error ? error.message : "No se pudo confirmar el pedido. Intentá nuevamente.";
+        window.alert(message);
+    } finally {
+        const submitButton = checkoutForm.querySelector<HTMLButtonElement>('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = "Confirmar pedido";
+        }
+    }
 };
 
 if (document.readyState === "loading") {

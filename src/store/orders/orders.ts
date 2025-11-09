@@ -155,7 +155,7 @@ const renderOrders = (orders: IOrder[]): void => {
     ordersContainer.classList.remove("hidden");
     ordersContainer.innerHTML = "";
 
-    // Ordenar por fecha más reciente primero (si está disponible)
+    // Ordenar por fecha más reciente primero
     const sortedOrders = [...orders].sort((a, b) => {
         if (!a.fecha || !b.fecha) return 0;
         return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
@@ -164,120 +164,55 @@ const renderOrders = (orders: IOrder[]): void => {
     sortedOrders.forEach((order) => {
         const card = document.createElement("article");
         card.className =
-            "flex flex-col gap-4 rounded-2xl border border-gray/20 bg-white p-6 shadow-md transition hover:shadow-lg";
+            "flex flex-col gap-4 rounded-2xl border border-gray/20 bg-white p-6 shadow-sm transition hover:shadow-md cursor-pointer";
 
-        // Header del pedido
+        // Header compacto con título y badge
         const header = document.createElement("div");
-        header.className = "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between";
-
-        const headerLeft = document.createElement("div");
-        headerLeft.className = "flex flex-col gap-1";
+        header.className = "flex items-center justify-between";
 
         const orderTitle = document.createElement("h3");
-        orderTitle.className = "text-lg font-semibold text-dark";
+        orderTitle.className = "text-base font-semibold text-dark";
         orderTitle.textContent = `Pedido #${order.id}`;
-
-        const orderDate = document.createElement("p");
-        orderDate.className = "text-sm text-dark/60";
-        orderDate.textContent = formatDate(order.fecha);
-
-        headerLeft.append(orderTitle, orderDate);
 
         const statusConfig = getStatusConfig(order.estado);
         const statusBadge = document.createElement("span");
-        statusBadge.className = `inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusConfig.className}`;
+        statusBadge.className = `inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase ${statusConfig.className}`;
         statusBadge.textContent = statusConfig.label;
 
-        header.append(headerLeft, statusBadge);
+        header.append(orderTitle, statusBadge);
 
-        // Información del pedido
-        const infoSection = document.createElement("div");
-        infoSection.className = "flex flex-col gap-2 border-t border-gray/20 pt-4";
+        // Fecha con icono
+        const dateSection = document.createElement("div");
+        dateSection.className = "flex items-center gap-2 text-sm text-dark/60";
+        dateSection.innerHTML = `🗓️ ${formatDate(order.fecha)}`;
 
-        const deliveryInfo = document.createElement("div");
-        deliveryInfo.className = "flex flex-col gap-1 text-sm";
-
-        const addressLabel = document.createElement("span");
-        addressLabel.className = "font-semibold text-dark";
-        addressLabel.textContent = "Dirección de entrega:";
-
-        const addressValue = document.createElement("span");
-        addressValue.className = "text-dark/70";
-        addressValue.textContent = order.direccion ?? "Sin dirección registrada";
-
-        deliveryInfo.append(addressLabel, addressValue);
-
-        const paymentInfo = document.createElement("div");
-        paymentInfo.className = "flex items-center gap-2 text-sm";
-
-        const paymentLabel = document.createElement("span");
-        paymentLabel.className = "font-semibold text-dark";
-        paymentLabel.textContent = "Método de pago:";
-
-        const paymentValue = document.createElement("span");
-        paymentValue.className = "text-dark/70";
-        paymentValue.textContent = getPaymentMethodLabel(order.metodoPago);
-
-        paymentInfo.append(paymentLabel, paymentValue);
-
-        const phoneInfo = document.createElement("div");
-        phoneInfo.className = "flex items-center gap-2 text-sm";
-
-        const phoneLabel = document.createElement("span");
-        phoneLabel.className = "font-semibold text-dark";
-        phoneLabel.textContent = "Teléfono:";
-
-        const phoneValue = document.createElement("span");
-        phoneValue.className = "text-dark/70";
-        phoneValue.textContent = order.telefono ? String(order.telefono) : "No disponible";
-
-        phoneInfo.append(phoneLabel, phoneValue);
-
-        infoSection.append(deliveryInfo, paymentInfo, phoneInfo);
-
-        // Detalles de productos (si están disponibles)
+        // Lista compacta de productos
+        const productsPreview = document.createElement("div");
+        productsPreview.className = "text-sm text-dark/70";
+        
         if (order.detalles && order.detalles.length > 0) {
-            const productsSection = document.createElement("div");
-            productsSection.className = "flex flex-col gap-2 border-t border-gray/20 pt-4";
-
-            const productsTitle = document.createElement("h4");
-            productsTitle.className = "text-sm font-semibold text-dark";
-            productsTitle.textContent = "Productos:";
-
-            productsSection.appendChild(productsTitle);
-
-            const productsList = document.createElement("ul");
-            productsList.className = "flex flex-col gap-1 text-sm text-dark/70";
-
-            order.detalles.forEach((detalle) => {
-                const productItem = document.createElement("li");
-                productItem.className = "flex items-center justify-between";
-
-                const productInfo = document.createElement("span");
-                const productName = detalle.producto ?? "Producto sin nombre";
-                productInfo.textContent = `${productName} × ${detalle.cantidad}`;
-
-                const productPrice = document.createElement("span");
-                if (typeof detalle.subtotal === "number") {
-                    productPrice.className = "font-semibold text-primary";
-                    productPrice.textContent = formatCurrency(detalle.subtotal);
-                }
-
-                productItem.append(productInfo, productPrice);
-                productsList.appendChild(productItem);
-            });
-
-            productsSection.appendChild(productsList);
-            card.appendChild(productsSection);
+            const productSummary = order.detalles
+                .map(d => `• ${d.producto || 'Producto'} (x${d.cantidad})`)
+                .join('\n');
+            productsPreview.textContent = productSummary;
+            productsPreview.style.whiteSpace = 'pre-line';
+        } else {
+            productsPreview.textContent = "Sin detalles de productos";
         }
 
-        // Footer con total
+        // Resumen de productos con icono
+        const productCount = document.createElement("div");
+        productCount.className = "flex items-center gap-2 text-sm text-dark/70";
+        const totalItems = order.detalles?.reduce((sum, d) => sum + d.cantidad, 0) || 0;
+        productCount.innerHTML = `📦 ${totalItems} producto(s)`;
+
+        // Footer con total destacado
         const footer = document.createElement("div");
-        footer.className = "flex items-center justify-between border-t border-gray/20 pt-4";
+        footer.className = "flex items-center justify-between pt-2 border-t border-gray/10";
 
         const totalLabel = document.createElement("span");
-        totalLabel.className = "text-base font-semibold text-dark";
-        totalLabel.textContent = "Total:";
+        totalLabel.className = "text-sm font-medium text-dark/70";
+        totalLabel.textContent = "Total";
 
         const totalValue = document.createElement("span");
         totalValue.className = "text-xl font-bold text-primary";
@@ -285,14 +220,146 @@ const renderOrders = (orders: IOrder[]): void => {
 
         footer.append(totalLabel, totalValue);
 
-        card.append(header, infoSection, footer);
+        // Agregar todo al card
+        card.append(header, dateSection, productsPreview, productCount, footer);
+
+        // Click para ver detalle (modal)
+        card.addEventListener("click", () => {
+            showOrderDetail(order);
+        });
+
         ordersContainer.appendChild(card);
     });
 };
 
+const showOrderDetail = (order: IOrder): void => {
+    // Crear modal
+    const modal = document.createElement("div");
+    modal.className = "fixed inset-0 z-50 flex items-center justify-center bg-dark/30 px-4";
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+
+    // Contenido del modal
+    const modalContent = document.createElement("div");
+    modalContent.className = "relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-8 shadow-lg";
+
+    // Botón cerrar
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "absolute right-4 top-4 text-2xl font-bold text-dark/60 transition hover:text-dark";
+    closeBtn.textContent = "×";
+    closeBtn.addEventListener("click", () => modal.remove());
+
+    // Badge de estado
+    const statusConfig = getStatusConfig(order.estado);
+    const statusBadge = document.createElement("div");
+    statusBadge.className = `inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold uppercase mb-4 ${statusConfig.className}`;
+    statusBadge.textContent = statusConfig.label;
+
+    // Fecha
+    const dateInfo = document.createElement("p");
+    dateInfo.className = "text-sm text-dark/60 mb-6 flex items-center gap-2";
+    dateInfo.innerHTML = `🗓️ ${formatDate(order.fecha)}`;
+
+    // Sección de información de entrega
+    const deliverySection = document.createElement("div");
+    deliverySection.className = "mb-6";
+    deliverySection.innerHTML = `
+        <h3 class="text-base font-semibold text-dark mb-3 flex items-center gap-2">
+            📍 Información de Entrega
+        </h3>
+        <div class="space-y-2 text-sm">
+            <div><span class="font-semibold text-dark">Dirección:</span> <span class="text-dark/70">${order.direccion || 'No especificada'}</span></div>
+            <div><span class="font-semibold text-dark">Teléfono:</span> <span class="text-dark/70">${order.telefono || 'No disponible'}</span></div>
+            <div><span class="font-semibold text-dark">Método de pago:</span> <span class="text-dark/70">💵 ${getPaymentMethodLabel(order.metodoPago)}</span></div>
+        </div>
+    `;
+
+    // Sección de productos
+    const productsSection = document.createElement("div");
+    productsSection.className = "mb-6";
+    
+    const productsTitle = document.createElement("h3");
+    productsTitle.className = "text-base font-semibold text-dark mb-3 flex items-center gap-2";
+    productsTitle.innerHTML = "🛍️ Productos";
+    
+    productsSection.appendChild(productsTitle);
+
+    if (order.detalles && order.detalles.length > 0) {
+        order.detalles.forEach((detalle) => {
+            const productRow = document.createElement("div");
+            productRow.className = "flex items-center justify-between py-2 text-sm border-b border-gray/10";
+            
+            const productInfo = document.createElement("div");
+            productInfo.className = "flex-1";
+            productInfo.innerHTML = `
+                <div class="font-medium text-dark">${detalle.producto || 'Producto'}</div>
+                <div class="text-xs text-dark/60">Cantidad: ${detalle.cantidad} × ${formatCurrency((detalle.subtotal || 0) / detalle.cantidad)}</div>
+            `;
+            
+            const productPrice = document.createElement("div");
+            productPrice.className = "font-semibold text-primary";
+            productPrice.textContent = formatCurrency(detalle.subtotal || 0);
+            
+            productRow.append(productInfo, productPrice);
+            productsSection.appendChild(productRow);
+        });
+    }
+
+    // Resumen de totales
+    const subtotal = order.total - 500;
+    const shipping = 500;
+    
+    const totalsSection = document.createElement("div");
+    totalsSection.className = "space-y-2 mb-6 pt-4 border-t border-gray/20";
+    totalsSection.innerHTML = `
+        <div class="flex justify-between text-sm">
+            <span class="text-dark/70">Subtotal:</span>
+            <span class="font-medium text-dark">${formatCurrency(subtotal)}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+            <span class="text-dark/70">Envío:</span>
+            <span class="font-medium text-dark">${formatCurrency(shipping)}</span>
+        </div>
+        <div class="flex justify-between text-lg font-bold pt-2 border-t border-gray/20">
+            <span class="text-primary">Total:</span>
+            <span class="text-primary">${formatCurrency(order.total)}</span>
+        </div>
+    `;
+
+    // Mensaje de estado
+    const statusMessage = document.createElement("div");
+    statusMessage.className = "rounded-xl bg-yellow-50 border border-yellow-200 p-4 text-sm";
+    statusMessage.innerHTML = `
+        <div class="flex items-start gap-3">
+            <span class="text-xl">⏳</span>
+            <div>
+                <div class="font-semibold text-yellow-800 mb-1">Tu pedido está siendo procesado</div>
+                <div class="text-yellow-700 text-xs">Te notificaremos cuando esté listo para entrega.</div>
+            </div>
+        </div>
+    `;
+
+    // Ensamblar modal
+    modalContent.append(
+        closeBtn,
+        statusBadge,
+        dateInfo,
+        deliverySection,
+        productsSection,
+        totalsSection,
+        statusMessage
+    );
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+};
+
 const loadOrders = async (user: IUser): Promise<void> => {
     try {
-        const response = await fetch(`${API_ENDPOINTS.orders}${user.id}`, {
+        const response = await fetch(`${API_ENDPOINTS.orders}${user.id}/`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json"
