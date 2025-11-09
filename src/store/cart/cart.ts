@@ -6,8 +6,6 @@ import {
 } from "../../utils/cartStorage";
 import { renderNavBarUserName } from "../../utils/navBarName";
 import { getStoredUserOrRedirect, registerLogoutHandler } from "../../utils/auth";
-import { API_ENDPOINTS } from "../../utils/api";
-import type { IOrderCreateRequest } from "../../types/IOrders";
 import type { IUser } from "../../types/IUser";
 
 const elements = {
@@ -84,118 +82,6 @@ const closeCheckoutModal = (): void => {
     elements.checkoutModal.classList.add("hidden");
     elements.checkoutModal.classList.remove("flex");
     elements.checkoutForm.reset();
-};
-
-const handleCheckoutSubmit = async (): Promise<void> => {
-    const user = getStoredUserOrRedirect();
-    
-    if (!user.id) {
-        console.error("Usuario sin ID");
-        window.alert("Error: No se pudo identificar al usuario.");
-        return;
-    }
-
-    const phoneInput = document.getElementById("checkout-phone") as HTMLInputElement | null;
-    const addressInput = document.getElementById("checkout-address") as HTMLTextAreaElement | null;
-    const paymentInput = document.getElementById("checkout-payment") as HTMLSelectElement | null;
-    const notesInput = document.getElementById("checkout-notes") as HTMLTextAreaElement | null;
-
-    if (!phoneInput || !addressInput || !paymentInput) {
-        console.error("Faltan elementos del formulario");
-        window.alert("Error: Faltan campos requeridos en el formulario.");
-        return;
-    }
-
-    const phoneRaw = phoneInput.value.trim().replace(/\D/g, "");
-    const telefono = phoneRaw;  // Mantener como string para evitar overflow de Integer en Java
-    
-    if (!telefono || telefono.length < 8) {
-        window.alert("Por favor, ingresá un número de teléfono válido (mínimo 8 dígitos).");
-        return;
-    }
-
-    const direccion = addressInput.value.trim();
-    const metodoPago = paymentInput.value as "efectivo" | "tarjeta" | "transferencia";
-    const notas = notesInput?.value.trim() || "";
-
-    if (!direccion) {
-        window.alert("Por favor, ingresá una dirección de entrega.");
-        return;
-    }
-
-    if (!metodoPago || !["efectivo", "tarjeta", "transferencia"].includes(metodoPago)) {
-        window.alert("Por favor, seleccioná un método de pago válido.");
-        return;
-    }
-
-    const cartItems = getCartItems();
-    
-    if (cartItems.length === 0) {
-        window.alert("El carrito está vacío.");
-        closeCheckoutModal();
-        return;
-    }
-
-    const detalles = cartItems.map((item) => ({
-        idProducto: typeof item.id === 'string' ? parseInt(item.id, 10) : item.id,
-        cantidad: item.quantity
-    }));
-
-    const orderPayload: IOrderCreateRequest = {
-        idUsuario: user.id,
-        telefono,
-        direccion: notas ? `${direccion} - Notas: ${notas}` : direccion,
-        metodoPago,
-        detalles
-    };
-
-    console.log("Creando pedido:", orderPayload);
-
-    try {
-        const response = await fetch(API_ENDPOINTS.createOrder, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(orderPayload)
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Error del servidor:", response.status, errorText);
-            
-            // Intentar parsear como JSON primero
-            try {
-                const errorJson = JSON.parse(errorText);
-                // Es un JSON, verificar si tiene mensaje
-                if (errorJson.message) {
-                    window.alert(`Error: ${errorJson.message}`);
-                } else {
-                    // JSON genérico de Spring Boot
-                    window.alert(`Hubo un error al procesar tu pedido.\n\nCódigo: ${response.status}\n\nVerificá que todos los productos estén disponibles y tengan stock.`);
-                }
-            } catch {
-                // No es JSON, es texto plano (como "Producto no encontrado")
-                window.alert(`Error: ${errorText}`);
-            }
-            return;
-        }
-
-        const responseData = await response.json();
-        console.log("Pedido creado:", responseData);
-
-        window.alert("¡Pedido confirmado! Podés ver el estado en 'Mis pedidos'.");
-        clearCart();
-        renderCartItems(getCartItems());
-        closeCheckoutModal();
-        
-        setTimeout(() => {
-            window.location.href = "../orders/orders.html";
-        }, 1000);
-    } catch (error) {
-        console.error("Error de red:", error);
-        window.alert(`Error de conexión. Verificá tu internet e intentá nuevamente.`);
-    }
 };
 
 const renderCartItems = (items: CartItem[]): void => {
@@ -386,9 +272,9 @@ const init = (): void => {
         });
     });
 
-    elements.checkoutForm?.addEventListener("submit", async (event) => {
+    elements.checkoutForm?.addEventListener("submit", (event) => {
         event.preventDefault();
-        await handleCheckoutSubmit();
+        window.alert("Este botón todavía no tiene funcionalidad.");
     });
 };
 

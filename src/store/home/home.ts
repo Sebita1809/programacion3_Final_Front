@@ -6,6 +6,8 @@ import type { IProduct } from "../../types/IProduct";
 import type { IUser } from "../../types/IUser";
 import type { ServerProductDTO } from "../../types/adminProducts";
 
+const PRODUCT_DETAIL_STORAGE_KEY = "selectedProductDetail";
+
 type SortOrder = "price-asc" | "price-desc";
 type CategoryFilterValue = "all" | string;
 
@@ -32,6 +34,23 @@ const currencyFormatter = new Intl.NumberFormat("es-AR", {
 });
 
 const formatCurrency = (value: number): string => currencyFormatter.format(value);
+
+const supportsSessionStorage = (): boolean => {
+    try {
+        return typeof window !== "undefined" && typeof window.sessionStorage !== "undefined";
+    } catch {
+        return false;
+    }
+};
+
+const rememberProductForDetail = (product: IProduct): void => {
+    if (!supportsSessionStorage()) return;
+    try {
+        window.sessionStorage.setItem(PRODUCT_DETAIL_STORAGE_KEY, JSON.stringify(product));
+    } catch (error) {
+        console.warn("No se pudo guardar el producto seleccionado:", error);
+    }
+};
 
 const state = {
     categories: [] as ICategoria[],
@@ -202,9 +221,16 @@ const setEmptyState = (visible: boolean, message?: string) => {
 };
 
 const createProductCard = (product: IProduct): HTMLElement => {
+    const link = document.createElement("a");
+    link.href = `../productDetail/productDetail.html?id=${encodeURIComponent(product.id)}`;
+    link.className =
+        "block rounded-xl border border-transparent transition hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+    link.addEventListener("click", () => {
+        rememberProductForDetail(product);
+    });
+
     const card = document.createElement("article");
-    card.className =
-        "flex flex-col overflow-hidden rounded-xl border border-gray/30 bg-white";
+    card.className = "flex flex-col overflow-hidden rounded-xl border border-gray/30 bg-white";
 
     const imageWrapper = document.createElement("div");
     imageWrapper.className = "h-48 w-full bg-light";
@@ -268,7 +294,8 @@ const createProductCard = (product: IProduct): HTMLElement => {
     content.appendChild(footer);
 
     card.append(imageWrapper, content);
-    return card;
+    link.appendChild(card);
+    return link;
 };
 
 const updateProductsTitle = () => {

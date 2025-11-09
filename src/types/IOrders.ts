@@ -1,32 +1,37 @@
-export interface IOrderDetail {
+export type OrderStatus = "pendiente" | "confirmado" | "cancelado" | "terminado";
+
+export interface IOrderDetailRequest {
     idProducto: number;
     cantidad: number;
-    nombre?: string;
-    precio?: number;
+}
+
+export interface IOrderDetail {
+    producto?: string;
+    cantidad: number;
+    subtotal?: number;
+    idProducto?: number;
 }
 
 export interface IOrderCreateRequest {
     idUsuario: number;
-    telefono: string;  // String para evitar overflow de Integer en Java
+    telefono: number;
     direccion: string;
-    metodoPago: "efectivo" | "tarjeta" | "transferencia" | "trasferencia";
-    detalles: IOrderDetail[];
+    metodoPago: "efectivo" | "tarjeta" | "transferencia";
+    detalles: IOrderDetailRequest[];
 }
 
 export interface IOrder {
     id: number;
-    idUsuario: number;
-    telefono: number;
-    direccion: string;
-    metodoPago: string;
-    estado: "pendiente" | "confirmado" | "cancelado" | "terminado";
-    total: number;
     fecha?: string;
+    estado: OrderStatus;
+    direccion: string | null;
+    telefono: number | null;
+    metodoPago: string | null;
+    total: number;
     detalles: IOrderDetail[];
 }
 
 export interface IOrderStatusUpdate {
     id: number;
-    estado: "pendiente" | "confirmado" | "cancelado" | "terminado";
+    estado: OrderStatus;
 }
-

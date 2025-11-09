@@ -138,6 +138,35 @@ export const clearCart = (): void => {
     window.localStorage.removeItem(CART_STORAGE_KEY);
 };
 
+export const addItemToCart = (
+    item: Omit<CartItem, "quantity"> & { quantity?: number }
+): void => {
+    if (!hasStorageSupport()) return;
+
+    const cartItems = readCartFromStorage();
+    const quantityToAdd = sanitizeQuantity(item.quantity ?? 1, item.stock) || 1;
+
+    const existingIndex = cartItems.findIndex((cartItem) => String(cartItem.id) === String(item.id));
+    if (existingIndex >= 0) {
+        const existing = cartItems[existingIndex];
+        const nextQuantity = sanitizeQuantity(existing.quantity + quantityToAdd, existing.stock);
+        cartItems[existingIndex] = {
+            ...existing,
+            quantity: nextQuantity || existing.quantity
+        };
+    } else {
+        const sanitizedQuantity = sanitizeQuantity(quantityToAdd, item.stock);
+        if (sanitizedQuantity > 0) {
+            cartItems.push({
+                ...item,
+                quantity: sanitizedQuantity
+            });
+        }
+    }
+
+    persistCart(cartItems);
+};
+
 export const updateCartItemQuantity = (itemId: CartItem["id"], nextQuantity: number): void => {
     if (!hasStorageSupport()) {
         return;

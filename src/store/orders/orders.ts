@@ -1,7 +1,7 @@
 import { renderNavBarUserName } from "../../utils/navBarName";
 import { getStoredUserOrRedirect, registerLogoutHandler } from "../../utils/auth";
 import { API_ENDPOINTS } from "../../utils/api";
-import type { IOrder } from "../../types/IOrders";
+import type { IOrder, OrderStatus } from "../../types/IOrders";
 import type { IUser } from "../../types/IUser";
 
 const elements = {
@@ -35,6 +35,49 @@ const currencyFormatter = new Intl.NumberFormat("es-AR", {
 });
 
 const formatCurrency = (value: number): string => currencyFormatter.format(value);
+
+const ORDER_STATUS_VALUES: OrderStatus[] = ["pendiente", "confirmado", "cancelado", "terminado"];
+
+const normalizeStatus = (status: unknown): OrderStatus => {
+    const normalized = typeof status === "string" ? status.toLowerCase() : "pendiente";
+    if (ORDER_STATUS_VALUES.includes(normalized as OrderStatus)) {
+        return normalized as OrderStatus;
+    }
+    return "pendiente";
+};
+
+const mapOrderDetails = (detalles: unknown): IOrder["detalles"] => {
+    if (!Array.isArray(detalles)) return [];
+    const parsed: IOrder["detalles"] = [];
+    detalles.forEach((detalle) => {
+        if (!detalle || typeof detalle !== "object") return;
+        const data = detalle as Record<string, unknown>;
+        const cantidad = Number(data.cantidad);
+        parsed.push({
+            producto: typeof data.producto === "string" ? data.producto : undefined,
+            cantidad: Number.isFinite(cantidad) ? cantidad : 0,
+            subtotal: typeof data.subtotal === "number" ? data.subtotal : undefined
+        });
+    });
+    return parsed;
+};
+
+const normalizeOrder = (raw: unknown): IOrder | null => {
+    if (!raw || typeof raw !== "object") return null;
+    const order = raw as Record<string, unknown>;
+    const total = Number(order.total);
+
+    return {
+        id: Number(order.id) || 0,
+        fecha: typeof order.fecha === "string" ? order.fecha : undefined,
+        estado: normalizeStatus(order.estado),
+        direccion: typeof order.direccion === "string" ? order.direccion : null,
+        telefono: typeof order.telefono === "number" ? order.telefono : null,
+        metodoPago: typeof order.metodoPago === "string" ? order.metodoPago : null,
+        total: Number.isFinite(total) ? total : 0,
+        detalles: mapOrderDetails(order.detalles)
+    };
+};
 
 const formatDate = (dateString?: string): string => {
     if (!dateString) return "Fecha no disponible";
@@ -83,7 +126,8 @@ const getStatusConfig = (estado: string): { label: string; className: string } =
     }
 };
 
-const getPaymentMethodLabel = (metodo: string): string => {
+const getPaymentMethodLabel = (metodo?: string | null): string => {
+    if (!metodo) return "No indicado";
     switch (metodo.toLowerCase()) {
         case "efectivo":
             return "Efectivo";
@@ -159,7 +203,7 @@ const renderOrders = (orders: IOrder[]): void => {
 
         const addressValue = document.createElement("span");
         addressValue.className = "text-dark/70";
-        addressValue.textContent = order.direccion;
+        addressValue.textContent = order.direccion ?? "Sin dirección registrada";
 
         deliveryInfo.append(addressLabel, addressValue);
 
@@ -185,7 +229,7 @@ const renderOrders = (orders: IOrder[]): void => {
 
         const phoneValue = document.createElement("span");
         phoneValue.className = "text-dark/70";
-        phoneValue.textContent = order.telefono.toString();
+        phoneValue.textContent = order.telefono ? String(order.telefono) : "No disponible";
 
         phoneInfo.append(phoneLabel, phoneValue);
 
@@ -210,13 +254,13 @@ const renderOrders = (orders: IOrder[]): void => {
                 productItem.className = "flex items-center justify-between";
 
                 const productInfo = document.createElement("span");
-                const productName = detalle.nombre || `Producto #${detalle.idProducto}`;
+                const productName = detalle.producto ?? "Producto sin nombre";
                 productInfo.textContent = `${productName} × ${detalle.cantidad}`;
 
                 const productPrice = document.createElement("span");
-                if (detalle.precio) {
+                if (typeof detalle.subtotal === "number") {
                     productPrice.className = "font-semibold text-primary";
-                    productPrice.textContent = formatCurrency(detalle.precio * detalle.cantidad);
+                    productPrice.textContent = formatCurrency(detalle.subtotal);
                 }
 
                 productItem.append(productInfo, productPrice);
@@ -261,7 +305,12 @@ const loadOrders = async (user: IUser): Promise<void> => {
             return;
         }
 
-        const orders: IOrder[] = await response.json();
+        const raw = await response.json();
+        const orders = Array.isArray(raw)
+            ? raw
+                  .map((item) => normalizeOrder(item))
+                  .filter((order): order is IOrder => Boolean(order))
+            : [];
         renderOrders(orders);
     } catch (error) {
         console.error("Error al cargar pedidos:", error);
