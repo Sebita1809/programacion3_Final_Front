@@ -28,6 +28,8 @@ export interface IOrder {
     telefono: number | null;
     metodoPago: string | null;
     total: number;
+    idUsuario?: number | null;
+    nombreUsuario?: string | null;
     detalles: IOrderDetail[];
 }
 

@@ -77,6 +77,8 @@ const normalizeOrder = (raw: unknown): IOrder | null => {
         telefono: typeof order.telefono === "number" ? order.telefono : null,
         metodoPago: typeof order.metodoPago === "string" ? order.metodoPago : null,
         total: Number.isFinite(total) ? total : 0,
+        idUsuario: typeof order.idUsuario === "number" ? order.idUsuario : null,
+        nombreUsuario: typeof order.nombreUsuario === "string" ? order.nombreUsuario : null,
         detalles: mapOrderDetails(order.detalles)
     };
 };
@@ -194,7 +196,7 @@ const renderOrders = (orders: IOrder[]): void => {
 
         const clientInfo = document.createElement("p");
         clientInfo.className = "text-sm text-dark/60";
-        clientInfo.textContent = `Cliente: Usuario #${order.id}`;
+        clientInfo.textContent = `Cliente: ${order.nombreUsuario || 'Usuario desconocido'}`;
 
         const dateInfo = document.createElement("p");
         dateInfo.className = "text-xs text-dark/50";
@@ -266,7 +268,7 @@ const showOrderDetailModal = (order: IOrder): void => {
     const clientSection = document.createElement("div");
     clientSection.className = "mb-4 text-sm";
     clientSection.innerHTML = `
-        <div class="mb-2"><span class="font-semibold text-dark">Cliente:</span> <span class="text-dark/70">Usuario #${order.id}</span></div>
+        <div class="mb-2"><span class="font-semibold text-dark">Cliente:</span> <span class="text-dark/70">${order.nombreUsuario || 'Usuario desconocido'}</span></div>
         <div class="mb-2"><span class="font-semibold text-dark">Fecha:</span> <span class="text-dark/70">${formatDate(order.fecha)}</span></div>
         <div><span class="font-semibold text-dark">Teléfono:</span> <span class="text-dark/70">${order.telefono || 'No disponible'}</span></div>
         <div><span class="font-semibold text-dark">Dirección:</span> <span class="text-dark/70">${order.direccion || 'No especificada'}</span></div>
