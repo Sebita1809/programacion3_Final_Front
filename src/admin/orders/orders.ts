@@ -100,7 +100,8 @@ const getStatusConfig = (status: OrderStatus): { label: string; className: strin
 
 const state = {
     orders: [] as IOrder[],
-    updating: new Set<number>()
+    updating: new Set<number>(),
+    deleting: new Set<number>()
 };
 
 const setUpdating = (orderId: number, updating: boolean) => {
@@ -108,6 +109,14 @@ const setUpdating = (orderId: number, updating: boolean) => {
         state.updating.add(orderId);
     } else {
         state.updating.delete(orderId);
+    }
+};
+
+const setDeleting = (orderId: number, deleting: boolean) => {
+    if (deleting) {
+        state.deleting.add(orderId);
+    } else {
+        state.deleting.delete(orderId);
     }
 };
 
@@ -141,6 +150,37 @@ const updateOrderStatus = async (orderId: number, nextStatus: OrderStatus): Prom
         );
     } finally {
         setUpdating(orderId, false);
+        renderOrders(state.orders);
+    }
+};
+
+const deleteOrder = async (orderId: number): Promise<boolean> => {
+    if (state.deleting.has(orderId)) {
+        return false;
+    }
+
+    setDeleting(orderId, true);
+    renderOrders(state.orders);
+
+    try {
+        const response = await fetch(`${API_ENDPOINTS.orders}${orderId}/delete`, {
+            method: "DELETE"
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || "No se pudo eliminar el pedido.");
+        }
+
+        state.orders = state.orders.filter((order) => order.id !== orderId);
+        window.alert(`Pedido #${orderId} eliminado.`);
+        return true;
+    } catch (error) {
+        console.error("No se pudo eliminar el pedido:", error);
+        window.alert(error instanceof Error ? error.message : "No se pudo eliminar el pedido.");
+        return false;
+    } finally {
+        setDeleting(orderId, false);
         renderOrders(state.orders);
     }
 };
@@ -182,6 +222,9 @@ const renderOrders = (orders: IOrder[]): void => {
         const card = document.createElement("article");
         card.className =
             "flex flex-col gap-4 rounded-2xl border border-gray/20 bg-white p-6 shadow-sm transition hover:shadow-md cursor-pointer";
+        if (state.deleting.has(order.id)) {
+            card.classList.add("opacity-60", "pointer-events-none");
+        }
 
         // Header compacto con título y badge
         const header = document.createElement("div");
@@ -372,6 +415,33 @@ const showOrderDetailModal = (order: IOrder): void => {
 
     stateSection.append(stateLabel, stateSelect, updateBtn);
 
+    const dangerSection = document.createElement("div");
+    dangerSection.className = "mt-6 border-t border-danger/20 pt-4";
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className =
+        "w-full rounded-xl border border-danger px-4 py-3 text-sm font-semibold text-danger transition hover:bg-danger/10 disabled:opacity-60";
+    const isDeleting = state.deleting.has(order.id);
+    deleteBtn.textContent = isDeleting ? "Eliminando..." : "Eliminar pedido";
+    deleteBtn.disabled = isDeleting;
+    deleteBtn.addEventListener("click", async () => {
+        if (!window.confirm(`¿Deseás eliminar el pedido #${order.id}? Esta acción no se puede deshacer.`)) {
+            return;
+        }
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = "Eliminando...";
+        const deleted = await deleteOrder(order.id);
+        if (deleted) {
+            modal.remove();
+        } else {
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = "Eliminar pedido";
+        }
+    });
+
+    dangerSection.append(deleteBtn);
+
     // Ensamblar modal
     modalContent.append(
         closeBtn,
@@ -379,7 +449,8 @@ const showOrderDetailModal = (order: IOrder): void => {
         clientSection,
         productsSection,
         totalsSection,
-        stateSection
+        stateSection,
+        dangerSection
     );
     
     modal.appendChild(modalContent);

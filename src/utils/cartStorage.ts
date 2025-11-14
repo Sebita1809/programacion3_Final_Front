@@ -39,7 +39,10 @@ const sanitizeQuantity = (value: unknown, stock?: number): number => {
         return 0;
     }
 
-    if (typeof stock === "number" && Number.isFinite(stock) && stock > 0) {
+    if (typeof stock === "number") {
+        if (!Number.isFinite(stock) || stock <= 0) {
+            return 0;
+        }
         return Math.min(normalized, Math.floor(stock));
     }
 
@@ -144,7 +147,11 @@ export const addItemToCart = (
     if (!hasStorageSupport()) return;
 
     const cartItems = readCartFromStorage();
-    const quantityToAdd = sanitizeQuantity(item.quantity ?? 1, item.stock) || 1;
+    const quantityToAdd = sanitizeQuantity(item.quantity ?? 1, item.stock);
+    if (quantityToAdd <= 0) {
+        console.warn("Intento de agregar un producto sin stock disponible al carrito.", item);
+        return;
+    }
 
     const existingIndex = cartItems.findIndex((cartItem) => String(cartItem.id) === String(item.id));
     if (existingIndex >= 0) {

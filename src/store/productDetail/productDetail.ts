@@ -173,18 +173,22 @@ const renderProduct = (product: IProduct) => {
             product.descripcion ?? "Este producto aún no tiene descripción.";
     }
 
+    const inStock = product.stock > 0;
     if (elements.stockInline) {
-        const inStock = product.stock > 0;
-        elements.stockInline.textContent = inStock ? `Stock: ${product.stock}` : "Stock: 0";
+        elements.stockInline.textContent = inStock ? `Stock: ${product.stock}` : "Sin stock";
         elements.stockInline.className = inStock
             ? "text-xs font-semibold text-dark/50"
             : "text-xs font-semibold text-danger/70";
     }
+    toggleStockControls(inStock);
 
     toggleVisibility(elements.content, true);
 };
 
 const clampQuantity = (value: number, stock?: number): number => {
+    if (typeof stock === "number" && stock <= 0) {
+        return 0;
+    }
     const normalized = Number.isFinite(value) ? value : 1;
     const min = 1;
     if (typeof stock === "number" && stock > 0) {
@@ -203,6 +207,27 @@ const setQuantityValue = (value: number) => {
     elements.quantityInput.value = String(clampQuantity(value, currentProduct?.stock));
 };
 
+const toggleStockControls = (inStock: boolean) => {
+    if (elements.quantityInput) {
+        elements.quantityInput.disabled = !inStock;
+        elements.quantityInput.value = inStock ? "1" : "0";
+    }
+
+    const controls = [elements.quantityDecrease, elements.quantityIncrease];
+    controls.forEach((control) => {
+        control?.toggleAttribute("disabled", !inStock);
+        control?.classList.toggle("opacity-60", !inStock);
+        control?.classList.toggle("cursor-not-allowed", !inStock);
+    });
+
+    if (elements.addToCartBtn) {
+        elements.addToCartBtn.disabled = !inStock;
+        elements.addToCartBtn.textContent = inStock ? "🛒 Agregar al carrito" : "Sin stock";
+        elements.addToCartBtn.classList.toggle("opacity-70", !inStock);
+        elements.addToCartBtn.classList.toggle("cursor-not-allowed", !inStock);
+    }
+};
+
 const handleQuantityDelta = (delta: number) => {
     const current = getQuantityValue();
     setQuantityValue(current + delta);
@@ -210,6 +235,10 @@ const handleQuantityDelta = (delta: number) => {
 
 const handleAddToCart = () => {
     if (!currentProduct) return;
+    if (currentProduct.stock <= 0) {
+        window.alert("Este producto no tiene stock disponible en este momento.");
+        return;
+    }
     const quantity = getQuantityValue();
     addItemToCart({
         id: currentProduct.id,
